@@ -22,7 +22,9 @@ if __name__ == "__main__":
         injr = dat['#41_injection_rate']
         ekdr = dat['#42_ekin_diss_rate']
         emdr = dat['#43_emag_diss_rate']
-        cfp.plot(x=time, y=v_disp, label=path[3:-1])
+        cfp.plot(x=time, y=injr, label=path[3:-1], color ='r')
+        #cfp.plot(x=time, y=ekdr, label=path[3:-1], color ='b')
+        cfp.plot(x=time, y=ekdr+emdr, label=path[3:-1], color ='y')
     ylabel=r'$\sigma_v$'
     cfp.plot(xlabel=r'$t/t_\mathrm{turb}$', ylabel=ylabel, save=fig_path+'v_disp.pdf')
 

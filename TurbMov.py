@@ -4,6 +4,7 @@
 # Modified by Edward Troccoli
 
 import glob
+from tkinter import Variable
 import numpy as np
 import timeit
 import cfpack as cfp
@@ -12,61 +13,79 @@ import cfpack.hdfio as hdfio
 import flashplotlib as fpl 
 from cfpack.defaults import *
 from Globals import *
+import argparse
 
 
-def emag_dens(files,save_dir):
-        for i, filen in enumerate(files):
+def plot_variable(files, save_dir, variable):
+    for i, filen in enumerate(files):
+        # Read different variables from the file
+        magx = hdfio.read(filen, "magx_slice_xy")
+        magy = hdfio.read(filen, "magy_slice_xy")
+        magz = hdfio.read(filen, "magz_slice_xy")
+        emag = (magx ** 2 + magy ** 2 + magz ** 2) / (8 * np.pi)
+        dens = hdfio.read(filen, "dens_slice_xy")
+        emdr = hdfio.read(filen, "emdr_slice_xy")
 
-            # Read the magnetic field slices from the file using hdfio
-            magx = hdfio.read(filen, "magx_slice_xy")
-            magy = hdfio.read(filen, "magy_slice_xy")
-            magz = hdfio.read(filen, "magz_slice_xy")
+        # Create a dictionary to select the correct variable
+        data_dict = {
+            "emag": emag,
+            "dens": dens,
+            "emdr": emdr
+        }
 
-            # Compute the magnetic energy density (or magnitude) emag
-            emag = (magx ** 2 + magy ** 2 + magz ** 2) / (8 * np.pi)
+        if variable not in data_dict:
+            raise ValueError(f"Invalid variable name '{variable}'. Choose from {list(data_dict.keys())}")
+        
+        if variable == "emag":
+            cmap_label = r"Electromagnetic Energy Density (erg/cm$^3$)"
+            log = True
+            vmin=10 ** -2
+            vmax=10 ** 2
+        elif variable == "dens":
+            cmap_label = r"Density $\rho/\langle \rho\rangle$"
+            log = True
+            vmin=10 ** -2
+            vmax=10 ** 2
+        elif variable == "emdr":
+            cmap_label = r"Kinetic Energy Dissipation Rate"
+            log = False
+            vmin=-10 ** 4
+            vmax=10 ** 4
+        else:
+            return
+            
+        # Retrieve the correct data array
+        data_to_plot = data_dict[variable]
 
-            # Define formatted filename correctly
-            save_filename = "test_emag_dens_{:06d}.png".format(i)
-            # Plot and save the image
-            ret = cfp.plot_map(emag, log=True, cmap_label="Electromagnetic Energy Density (erg/m^3)", vmin=10 ** -2, vmax=10 ** 2)
-            #Roundabout way to add the time label
-            cfp.plot(ax=ret.ax()[0], x=0, y=1.025, text=f"Time = {i/100}$t_{{\\mathrm{{turb}}}}$", normalised_coords=True, save=os.path.join(save_dir, save_filename))
-    def dens(files,save_dir):
-        for i, filen in enumerate(files):
+        # Define formatted filename correctly
+        save_filename = f"test_{variable}_{i:06d}.png"
 
-            # Read the magnetic field slices from the file using hdfio
-            dens = hdfio.read(filen, "dens_slice_xy")
-            # Compute the magnetic energy density (or magnitude) emag
-            save_filename = "test_dens_{:06d}.png".format(i)
-            # Plot and save the image
-            ret = cfp.plot_map(dens, log=True, cmap_label="Density (kg/m^3)", vmin=10 ** -2, vmax=10 ** 2)
-            #Roundabout way to add the time label
-            cfp.plot(ax=ret.ax()[0], x=0, y=1.025, text=f"Time = {i/100}$t_{{\\mathrm{{turb}}}}$", normalised_coords=True, save=os.path.join(save_dir, save_filename))
-def emdr(files,save_dir):
-        for i, filen in enumerate(files):
+        # Plot and save the image
+        ret = cfp.plot_map(data_to_plot, log=log, cmap_label=cmap_label, vmin=vmin, vmax=vmax)
 
-            # Read the magnetic field slices from the file using hdfio
-            emdr = hdfio.read(filen, "emdr_slice_xy")
-            # Compute the magnetic energy density (or magnitude) emag
-            save_filename = "test_emdr_{:06d}.png".format(i)
-            # Plot and save the image
-            ret = cfp.plot_map(emdr, cmap_label="Magnetic Energy Dissipation Rate")
-            #Roundabout way to add the time label
-            cfp.plot(ax=ret.ax()[0], x=0, y=1.025, text=f"Time = {i/100}$t_{{\\mathrm{{turb}}}}$", normalised_coords=True, save=os.path.join(save_dir, save_filename))
+        # Roundabout way to add the time label
+        cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, text=f"Time = {i/100}"+r"$t_\mathrm{turb}$", color='white', normalised_coords=True, save=os.path.join(save_dir, save_filename))
+
 
 if __name__ == "__main__":
     # Start timing the process
     start_time = timeit.default_timer()
     path = "../Mach5-n128/"
     save_dir = os.path.join(path, "MovieFrames/") 
+
+    # Argument parser setup
+    parser = argparse.ArgumentParser(description="Plot different variables from simulation data.")
+    parser.add_argument("--variable", type=str, required=True, help="Variable to plot (e.g., emag, dens, emdr)")
+    # Parse the command-line arguments
+    args = parser.parse_args()
+     # Store the variable argument
+    variable = args.variable
+
     # Get all files matching the pattern Turb_slice_xy_*
     files = sorted(glob.glob(path+"Turb_slice_xy_*"))
-    #dat = cfp.read_ascii("Turb.dat")
-    #time = dat['01_time']
-    #t_turb = 0.1
-    #normalised_time = np.round(time / t_turb, 4)
-    # Loop over each file
-    emdr(f)
+    
+    #call plot function
+    plot_variable(files,save_dir,variable)
     
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
