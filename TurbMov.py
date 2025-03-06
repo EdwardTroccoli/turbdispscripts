@@ -1,92 +1,96 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# written by Christoph Federrath, 2021-2025
-# Modified by Edward Troccoli
+# written by Edward Troccoli & Christoph Federrath, 2025
 
 import glob
 from tkinter import Variable
 import numpy as np
+import os
 import timeit
 import cfpack as cfp
-import os
 import cfpack.hdfio as hdfio
-import flashplotlib as fpl 
 from cfpack.defaults import *
 from Globals import *
 import argparse
 
 
-def plot_variable(files, save_dir, variable):
+def plot_variable(files, out_path, variable):
+
+    # loop over plot files
     for i, filen in enumerate(files):
-        # Read different variables from the file
-        magx = hdfio.read(filen, "magx_slice_xy")
-        magy = hdfio.read(filen, "magy_slice_xy")
-        magz = hdfio.read(filen, "magz_slice_xy")
-        emag = (magx ** 2 + magy ** 2 + magz ** 2) / (8 * np.pi)
-        dens = hdfio.read(filen, "dens_slice_xy")
-        emdr = hdfio.read(filen, "emdr_slice_xy")
 
-        # Create a dictionary to select the correct variable
-        data_dict = {
-            "emag": emag,
-            "dens": dens,
-            "emdr": emdr
-        }
+        # defaults
+        log = True
+        vmin = 1e-2
+        vmax = 1e2
 
-        if variable not in data_dict:
-            raise ValueError(f"Invalid variable name '{variable}'. Choose from {list(data_dict.keys())}")
-        
-        if variable == "emag":
-            cmap_label = r"Electromagnetic Energy Density (erg/cm$^3$)"
-            log = True
-            vmin=10 ** -2
-            vmax=10 ** 2
-        elif variable == "dens":
-            cmap_label = r"Density $\rho/\langle \rho\rangle$"
-            log = True
-            vmin=10 ** -2
-            vmax=10 ** 2
-        elif variable == "emdr":
-            cmap_label = r"Kinetic Energy Dissipation Rate"
+        if variable == "dens":
+            var = hdfio.read(filen, "dens_slice_xy")
+            cmap_label = r"Density ($\rho/\langle\rho\rangle$)"
+        elif variable == "ekin":
+            dens = hdfio.read(filen, "dens_slice_xy")
+            velx = hdfio.read(filen, "velx_slice_xy")
+            vely = hdfio.read(filen, "vely_slice_xy")
+            velz = hdfio.read(filen, "velz_slice_xy")
+            var = 0.5 * dens * (velx ** 2 + vely ** 2 + velz ** 2)
+            cmap_label = r"Kinetic energy density"
+        elif variable == "ekdr":
+            var = hdfio.read(filen, "ekdr_slice_xy")
+            cmap_label = r"Kinetic energy dissipation rate"
             log = False
-            vmin=-10 ** 4
-            vmax=10 ** 4
+            vmin = -1e4
+            vmax = 1e4
+        elif variable == "emag":
+            magx = hdfio.read(filen, "magx_slice_xy")
+            magy = hdfio.read(filen, "magy_slice_xy")
+            magz = hdfio.read(filen, "magz_slice_xy")
+            var = (magx ** 2 + magy ** 2 + magz ** 2) / (8 * np.pi)
+            cmap_label = r"Magnetic energy density"
+        elif variable == "emdr":
+            var = hdfio.read(filen, "emdr_slice_xy")
+            cmap_label = r"Magnetic energy dissipation rate"
+            log = False
+            vmin = -1e4
+            vmax = 1e4
         else:
-            return
-            
-        # Retrieve the correct data array
-        data_to_plot = data_dict[variable]
+            print("Variable not implemented.", error=True)
 
         # Define formatted filename correctly
-        save_filename = f"test_{variable}_{i:06d}.png"
+        out_file = out_path+f"frame_{variable}_{i:06d}.png"
 
         # Plot and save the image
-        ret = cfp.plot_map(data_to_plot, log=log, cmap_label=cmap_label, vmin=vmin, vmax=vmax)
+        ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, xlabel=r"$x$", ylabel=r"$y$", xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
 
         # Roundabout way to add the time label
-        cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, text=f"Time = {i/100}"+r"$t_\mathrm{turb}$", color='white', normalised_coords=True, save=os.path.join(save_dir, save_filename))
+        cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=r"$x$", ylabel=r"$y$", text=f"Time = {i/100}"+r"$\,t_\mathrm{turb}$", color='white', normalised_coords=True, save=out_file)
 
 
 if __name__ == "__main__":
-    # Start timing the process
-    start_time = timeit.default_timer()
-    path = "../Mach5-n128/"
-    save_dir = os.path.join(path, "MovieFrames/") 
 
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Plot different variables from simulation data.")
-    parser.add_argument("--variable", type=str, required=True, help="Variable to plot (e.g., emag, dens, emdr)")
+    var_choices = ["dens", "ekin", "ekdr", "emag", "emdr"]
+    parser.add_argument("-v", "--variable", choices=var_choices, required=True, help="Variable to plot; choice of "+str(var_choices))
     # Parse the command-line arguments
     args = parser.parse_args()
-     # Store the variable argument
-    variable = args.variable
 
-    # Get all files matching the pattern Turb_slice_xy_*
-    files = sorted(glob.glob(path+"Turb_slice_xy_*"))
-    
-    #call plot function
-    plot_variable(files,save_dir,variable)
-    
+    # Start timing the process
+    start_time = timeit.default_timer()
+
+    # loop over simulations
+    for i, path in enumerate(sim_paths):
+
+        out_path = path + "MovieFrames/"
+        if not os.path.isdir(out_path):
+            cfp.run_shell_command('mkdir '+out_path)
+
+        # Get all files matching the pattern Turb_slice_xy_*
+        #files = sorted(glob.glob(path+"Turb_slice_xy_*"))
+        files = sorted(glob.glob(path+"Turb_slice_xy_000?00"))
+
+        # call plot function
+        plot_variable(files, out_path, args.variable)
+
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
     print("Processing time: {:.2f}s".format(stop_time - start_time))
