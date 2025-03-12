@@ -5,9 +5,11 @@
 import numpy as np
 
 
-sim_paths = ["../Mach5-n128/"]
-t_turb = np.array([0.1])
+sim_paths = ["../Mach5-n128/","../Mach5-n256/"]
+t_turb = np.array([0.1,0.1])
+color = ['r','b']
 fig_path = "../Figures/"
+
 
 
 

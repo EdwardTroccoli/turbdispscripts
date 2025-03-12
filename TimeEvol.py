@@ -15,6 +15,8 @@ def plot_var(variable):
 
     if not os.path.isdir(fig_path):
         cfp.run_shell_command('mkdir '+fig_path)
+    
+
 
     for i, path in enumerate(sim_paths):
 
@@ -22,7 +24,7 @@ def plot_var(variable):
 
         dat = cfp.read_ascii(path+"Turb.dat")
         time = dat['01_time'] / t_turb[i]
-
+        
         if variable == "vstd":
             var = dat['#14_rms_velocity']
             ylabel = r'$\sigma_v$'
@@ -45,7 +47,7 @@ def plot_var(variable):
             var = dat['#42_ekin_diss_rate'] + dat['#43_emag_diss_rate']
             ylabel = r'total energy dissipation rate'
 
-        cfp.plot(x=time, y=var, label=path[3:-1], color ='r')
+        cfp.plot(x=time, y=var, label=path[3:-1], color=color[i])
 
     cfp.plot(xlabel=r'$t/t_\mathrm{turb}$', ylabel=ylabel, save=fig_path+"tevol_"+variable+'.pdf')
 
