@@ -59,7 +59,7 @@ def plot_variable(files, out_path, variable):
         out_file = out_path+f"frame_{variable}_{i:06d}.png"
 
         # Plot and save the image
-        ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, xlabel=r"$x$", ylabel=r"$y$", xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
+        ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, cmap='afmhot', xlabel=r"$x$", ylabel=r"$y$", xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
 
         # Roundabout way to add the time label
         cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=r"$x$", ylabel=r"$y$", text=f"Time = {i/100}"+r"$\,t_\mathrm{turb}$", color='white', normalised_coords=True, save=out_file)
@@ -85,8 +85,8 @@ if __name__ == "__main__":
             cfp.run_shell_command('mkdir '+out_path)
 
         # Get all files matching the pattern Turb_slice_xy_*
-        #files = sorted(glob.glob(path+"Turb_slice_xy_*"))
-        files = sorted(glob.glob(path+"Turb_slice_xy_000?00"))
+        files = sorted(glob.glob(path+"Turb_slice_xy_*"))
+        #files = sorted(glob.glob(path+"Turb_slice_xy_00000"))
 
         # call plot function
         plot_variable(files, out_path, args.variable)
