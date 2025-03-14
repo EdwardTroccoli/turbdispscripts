@@ -11,7 +11,7 @@
 #PBS -m bea
 #PBS -M edward.troccoli@anu.edu.au
 
-TurbMov.py -v &>TurbMov.out
+TurbMov.py -v dens &>TurbMov.out
 
 # In case we need to run undersubscribed nodes to get more mem per core.
 # The following for instance would give us 8GB/core instead of the normal 4GB/core
