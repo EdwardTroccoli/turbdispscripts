@@ -11,7 +11,7 @@ from cfpack.defaults import *
 from Globals import *
 
 
-def plot_var(variable):
+def plot_var(variable,file_name):
 
     if not os.path.isdir(fig_path):
         cfp.run_shell_command('mkdir '+fig_path)
@@ -49,7 +49,7 @@ def plot_var(variable):
 
         cfp.plot(x=time, y=var, label=path[3:-1], color=color[i])
 
-    cfp.plot(xlabel=r'$t/t_\mathrm{turb}$', ylabel=ylabel, save=fig_path+"tevol_"+variable+'.pdf')
+    cfp.plot(xlabel=r'$t/t_\mathrm{turb}$', ylabel=ylabel, save=fig_path+"tevol_"+f"{variable}_"+file_name+'.pdf', legend_loc='best')
 
 
 if __name__ == "__main__":
@@ -57,15 +57,20 @@ if __name__ == "__main__":
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Plot different variables from simulation data.")
     var_choices = ["vstd", "ekin", "emag", "injr", "ekdr", "emdr", "etdr"]
+    name_choices = ["../Mach5-n128/AlfvenMach6/","../Mach5-n128/AlfvenMach10/","..."]
     parser.add_argument("-v", "--variable", nargs='*', choices=var_choices, required=True, help="Variable to plot; choice of "+str(var_choices))
+    parser.add_argument("-n", "--filename", nargs='*', required=True, help="Give the plotfile a name "+str(name_choices))
     # Parse the command-line arguments
     args = parser.parse_args()
 
     # Start timing the process
     start_time = timeit.default_timer()
 
-    for var in args.variable:
-        plot_var(var)
+    if len(args.variable) != len(args.filename):
+        raise ValueError("The number of variables and filenames must be the same.")
+
+    for var, file_name in zip(args.variable, args.filename):
+        plot_var(var, file_name)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
