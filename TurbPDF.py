@@ -10,6 +10,7 @@ import cfpack as cfp
 from cfpack.defaults import *
 from turblib import read_pdf
 from Globals import *
+import glob
 
 
 def compute_pdf(variable,file_name):
@@ -21,21 +22,27 @@ def compute_pdf(variable,file_name):
 
         print(f'Working on: {path}', color='green')
 
-        if variable == "ekin":
-            log = False
-            vmin = -1e4
+        if variable == "emdr":
+            vmin = 1
             vmax = 1e4
-            cfp.run_shell_command(pdfs_mpi file -dset variable -bw 100 -vmin vmin -vmax vmax -log log)
+            stop()
+            cfp.run_shell_command(f'pdfs {file_name} -dset {variable} -bw 100 -vmin vmin -vmax vmax')
+            
+            pdf_file = glob.glob(f'{file_name}_{variable}*')
+            var = read_pdf(pdf_file[0])
+            data = var[0]
         else:
             print("Variable not implemented.", error=True)
         
-            var = read_pdf()
 
-        #cfp.plot(x=time, y=var, label=path[3:-1], color=color[i])
+    return data
+        
 
-    #cfp.plot(xlabel=r'$t/t_\mathrm{turb}$', ylabel=ylabel, save=fig_path+"tevol_"+f"{variable}_"+file_name+'.pdf', legend_loc='best')
+def plot_pdf(pdf):
+    y_label = 'PDF'
 
-def plot_pdf():
+    cfp.plot(x=pdf['col1'], y=pdf['col2'])
+    cfp.plot(xlabel=r'$\mathrm{x}$', ylabel=ylabel, save=fig_path+"tevol_"+f"{variable}_"+file_name+'.pdf', legend_loc='best')
 
 
 if __name__ == "__main__":
@@ -54,7 +61,7 @@ if __name__ == "__main__":
 
 
     for var in args.variable:
-        plot_pdf(var, args.filename)
+        plot_pdf(compute_pdf(var, args.filename))
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
