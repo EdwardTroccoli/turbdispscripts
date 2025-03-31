@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# written by Edward Troccoli, 2025
+# written by Edward Troccoli and Christoph Federrath, 2025
 
 import argparse
 import numpy as np
@@ -15,9 +15,25 @@ import glob
 
 def compute_pdf(path, variable):
     if variable == "ekdr":
-        vmin = -2e5
-        vmax = +2e5
-        bw = 100
+        vmin = -1e4
+        vmax = +1e4
+        bw = 20
+    elif variable == "emdr":
+        vmin = -1e4
+        vmax = +1e4
+        bw = 20
+    elif variable == "emag":
+        vmin = -1e4
+        vmax = +1e4
+        bw = 20
+    elif variable == "ekin":
+        vmin = -1e4
+        vmax = +1e4
+        bw = 20
+    elif variable == "injr":
+        vmin = -1e4
+        vmax = +1e4
+        bw = 20
     else:
         print("Variable not implemented.", error=True)
     # loop over FLASH dump files
@@ -27,10 +43,21 @@ def compute_pdf(path, variable):
 
 
 def plot_pdf(pdf_dat):
-    y_label = 'PDF'
-    cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col3'])
-    cfp.plot(xlabel=r'$\mathrm{x}$', ylabel=ylabel, save=fig_path+"tevol_"+f"{variable}_"+file_name+'.pdf', legend_loc='best')
-
+    if var == "ekdr":
+        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col3'])
+        cfp.plot(xlabel='Kinetic Energy Dissipation Rate', ylabel='PDF of Kinetic Energy Dissipation Rate', xlim = [-1e4,1e4], ylog = True, save=fig_path+"aver_"+var+'.pdf', legend_loc='best')
+    elif var == "emdr":
+        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col3'])
+        cfp.plot(xlabel="Magnetic Energy Dissipation Rate", ylabel='PDF of Magnetic Energy Dissipation Rate', xlim = [-1e4,1e4], ylog = True, save=fig_path+"aver_"+var+'.pdf', legend_loc='best') 
+    elif var == "injr":
+        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col3'])
+        cfp.plot(xlabel="Energy Injection Rate", ylabel='PDF of Energy Injection Rate', xlim = [-1e4,1e4], ylog = True, save=fig_path+"aver_"+var+'.pdf', legend_loc='best') 
+    elif var == "emag":
+        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col3'])
+        cfp.plot(xlabel="Magnetic Energy", ylabel='PDF of Magnetic Energy', xlim = [0,230], ylog = True, save=fig_path+"aver_"+var+'.pdf', legend_loc='best') 
+    elif var == "ekin":
+        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col3'])
+        cfp.plot(xlabel="Kinetic Energy", ylabel='PDF of Kinetic Energy', xlim = [0,1550], ylog = True, save=fig_path+"aver_"+var+'.pdf', legend_loc='best')  
 
 if __name__ == "__main__":
 
@@ -43,8 +70,7 @@ if __name__ == "__main__":
     # Start timing the process
     start_time = timeit.default_timer()
 
-    # vars = ["ekin", "emag", "injr", "ekdr", "emdr", "etdr"]
-    vars = ["ekdr"]
+    vars = ["ekin", "emag", "injr", "ekdr", "emdr"]
 
     # loop over simulations
     for path in sim_paths:
@@ -63,9 +89,7 @@ if __name__ == "__main__":
                 cfp.run_shell_command('mkdir '+fig_path)
 
             pdf_dat, pdf_header = read_pdf(pdf_aver_file) # read the PDF data
-            stop()
-
-            # plot_pdf(pdf_dat)
+            plot_pdf(pdf_dat)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
