@@ -11,6 +11,9 @@ from cfpack.defaults import *
 from turblib import aver_pdf, write_pdf, read_pdf
 from Globals import *
 import glob
+import flashlib as fl
+from scipy.stats import binned_statistic_2d
+import dill
 
 
 def compute_pdf(path, variable):
@@ -42,6 +45,32 @@ def compute_pdf(path, variable):
         cfp.run_shell_command(f'mpirun -np 8 pdfs {path+filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw}')
 
 
+def compute_2d_pdf(filename, variables, bins=np.array([np.linspace(0,10,20),np.linspace(0,10,20)]), overwrite=False):
+    out_filename = filename+"_2Dpdf_"+variables[0]+"_"+variables[1]+".pkl"
+    if not os.path.isfile(out_filename) or overwrite:
+        # read data
+        gg = fl.FlashGG(filename)
+        x = gg.ReadVar(dsets=variables)[0].flatten()
+        y = gg.ReadVar(dsets=variables)[1].flatten()
+        class ret:
+            # compute 2D counts
+            counts, x_edges, y_edges, binnumber = binned_statistic_2d(x, y, None, statistic='count', bins=bins)
+            # compute bin areas for normalization
+            dx = np.diff(x_edges)[0]  # bin width in x
+            dy = np.diff(y_edges)[0]  # bin width in y
+            bin_area = dx * dy
+            # normalize to get PDF (probability density)
+            pdf = counts / (np.sum(counts) * bin_area)  # ensures sum(pdf * bin_area) = 1
+            # save the data to file
+        with open(out_filename, "wb") as fobj:
+            print("Writing '"+out_filename+"'", color="magenta")
+            dill.dump(ret, fobj)
+    else:
+        print("Read '"+out_filename+"'", color="green")
+        ret = dill.load(open(out_filename, "rb"))
+    return ret
+
+
 def plot_pdf(pdf_dat):
     if var == "ekdr":
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col3'])
@@ -70,6 +99,20 @@ if __name__ == "__main__":
     # Start timing the process
     start_time = timeit.default_timer()
 
+    filename = sim_paths[0]+"Turb_hdf5_plt_cnt_{:04d}".format(50)
+    variables = ["dens", "ekdr"]
+    xbins = np.logspace(-4, 3, 500)
+    ybins = np.linspace(-0.5e4, 0.5e4, 500)
+    ybins = cfp.symlogspace(-2, 4, num=250)
+    bins = [xbins, ybins]
+    po = compute_2d_pdf(filename, variables, bins, overwrite=True)
+
+    cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlim=[po.x_edges.min(),po.x_edges.max()], ylim=[po.y_edges.min(),po.y_edges.max()], log=True, xlog=True, show=True)
+
+    stop()
+
+    exit()
+
     vars = ["ekin", "emag", "injr", "ekdr", "emdr"]
 
     # loop over simulations
@@ -84,7 +127,7 @@ if __name__ == "__main__":
                 aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
                 write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
 
-            # plot the PDF for example
+            # plot the PDF
             if not os.path.isdir(fig_path):
                 cfp.run_shell_command('mkdir '+fig_path)
 
