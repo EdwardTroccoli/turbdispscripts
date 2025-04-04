@@ -14,7 +14,7 @@ from Globals import *
 import argparse
 
 
-def plot_variable(files, out_path, variable):
+def plot_variable(files, out_path, variable, tturb):
 
     # loop over plot files
     for i, filen in enumerate(files):
@@ -62,7 +62,9 @@ def plot_variable(files, out_path, variable):
         ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, cmap='afmhot', xlabel=r"$x$", ylabel=r"$y$", xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
 
         # Roundabout way to add the time label
-        cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=r"$x$", ylabel=r"$y$", text=f"Time = {i/100}"+r"$\,t_\mathrm{turb}$", color='white', normalised_coords=True, save=out_file)
+        time = hdfio.read(filen, "time")[0] / tturb
+        time_str = cfp.round(time, 3, str_ret=True)
+        cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=r"$x$", ylabel=r"$y$", text=r"$t/t_\mathrm{turb}="+time_str+r"$", color='white', normalised_coords=True, save=out_file)
 
 
 if __name__ == "__main__":
@@ -89,7 +91,7 @@ if __name__ == "__main__":
         #files = sorted(glob.glob(path+"Turb_slice_xy_00000"))
 
         # call plot function
-        plot_variable(files, out_path, args.variable)
+        plot_variable(files, out_path, args.variable, t_turb[i])
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
