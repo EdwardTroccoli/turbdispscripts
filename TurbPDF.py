@@ -48,7 +48,7 @@ def compute_pdf(path, variable):
             cfp.run_shell_command(f'mpirun -np 8 pdfs {path+filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw}')
 
 def compute_2d_pdf(filename, variables, bins=np.array([np.linspace(0,10,20),np.linspace(0,10,20)]), overwrite=False):
-    out_filename = filename+"_2Dpdf_"+variables[0]+"_"+variables[1]+".pkl"
+    out_filename = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + ".pkl"
     if not os.path.isfile(out_filename) or overwrite:
         # read data
         gg = fl.FlashGG(filename)
@@ -98,57 +98,75 @@ if __name__ == "__main__":
 
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Create and plot PDFs of different variables from FLASH simulation data.")
-    var_choices = ["injr", "ekdr", "emdr", "ekin", "emag"]
+    #var_choices = ["injr", "ekdr", "emdr", "ekin", "emag"]
     parser.add_argument("-ov", "--overwrite", action='store_true', default=False, help="Overwrite files")
+    parser.add_argument("-p1", "--pdf1d", action='store_true', help="Compute and plot 1D PDFs")
+    parser.add_argument("-p2", "--pdf2d", action='store_true', help="Compute and plot 2D PDFs")
+
     args = parser.parse_args()
 
     # Start timing the process
     start_time = timeit.default_timer()
-
+    
+    #variables for the 1d pdf plots. yet to implement dens.
     vars = ["ekin", "emag", "injr", "ekdr", "emdr"]
-    variables = [["dens", "ekdr"],["dens", "emdr"]]
+    #variables for the 2d pdf plots, can add more.
+    variables = ["dens", "ekdr"]
 
     # loop over simulations
-    for path in sim_paths:
-        print(f'Working on: {path}', color='green')
-        # loop over simulation variables
-        for var in varibles:
-            pdf_aver_file = "aver_"+var+".pdf_data"
-            if args.overwrite:
-                compute_pdf(path, var) # compute the PDF by calling C++ 'pdf'
-                if var in ['emag', 'ekin']:
-                    pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data_log")
-                    aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
-                    write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
-                elif var in ["injr", "ekdr", "emdr"]: 
-                    pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data")
-                    aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
-                    write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
+    if args.pdf1d:
+        for path in sim_paths:
+            print(f'Working on: {path}', color='green')
+            # loop over simulation variables
+            for var in vars:
+                pdf_aver_file = "aver_"+var+".pdf_data"
+                if args.overwrite:
+                    compute_pdf(path, var) # compute the PDF by calling C++ 'pdf'
+                    if var in ['emag', 'ekin']:
+                        pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data_log")
+                        aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
+                        write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
+                    elif var in ["injr", "ekdr", "emdr"]: 
+                        pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data")
+                        aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
+                        write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
 
-            # plot the PDF
-            if not os.path.isdir(fig_path):
-                cfp.run_shell_command('mkdir '+fig_path)
+                # plot the PDF
+                if not os.path.isdir(fig_path):
+                    cfp.run_shell_command('mkdir '+fig_path)
 
-            pdf_dat, pdf_header = read_pdf(pdf_aver_file) # read the PDF data
-            plot_pdf(pdf_dat)
+                pdf_dat, pdf_header = read_pdf(pdf_aver_file) # read the PDF data
+                plot_pdf(pdf_dat)
     #Trying to get loop for 2D PDFs to work.
-    for path in sim_paths:
-        print(f'Working on: {path}', color='green')
-        # loop over simulation variables
-        for var in vars:
-            pdf_aver_file = "aver_"+var+".pdf_data"
-            if args.overwrite:
-                compute_2d_pdf(filename, var, bins=np.array([np.linspace(0,10,20),np.linspace(0,10,20)]), overwrite=False)
-                pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var[0]+var[1]".pdf_data_log")
-                aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
-                write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
-
-            # plot the PDF
-            if not os.path.isdir(fig_path):
-                cfp.run_shell_command('mkdir '+fig_path)
-
-            pdf_dat, pdf_header = read_pdf(pdf_aver_file) # read the PDF data
-            plot_pdf(pdf_dat)
+    if args.pdf2d:
+        for path in sim_paths:
+            print(f'Working on: {path}', color='green')
+            # loop over simulation variables
+            for var in variables:
+                if args.overwrite:
+                    pdf_data = []
+                    for d in range(20, 101):
+                        filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
+                        po = compute_2d_pdf(path+filename, variables, bins=np.array([np.linspace(0,10,20),np.linspace(0,10,20)]), overwrite=True)
+                        pdf_data.append(po.pdf)   
+                    #setup a class to store edges and the averaged pdf data.    
+                    class PO:
+                        pass
+                    po_avg = PO()
+                    po_avg.pdf = np.mean(np.stack(pdf_data, axis=0), axis=0)
+                    po_avg.x_edges = po.x_edges
+                    po_avg.y_edges = po.y_edges
+                    # Save to file
+                    out_filename = "averaged_2Dpdf_" + variables[0] + "_" + variables[1] + ".pkl"
+                    with open(out_filename, "wb") as f:
+                        dill.dump(po_avg, f)
+                # plot the PDF
+                if not os.path.isdir(fig_path):
+                    cfp.run_shell_command('mkdir '+fig_path)
+                with open("averaged_2Dpdf_" + variables[0] + "_" + variables[1] + ".pkl", "rb") as f:
+                    po_loaded = dill.load(f)
+                # Plot
+                plot_2Dpdf(po_loaded)   
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
