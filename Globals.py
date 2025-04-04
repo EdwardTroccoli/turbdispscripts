@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# written by Edward Troccoli, 2025
+# written by Edward Troccoli & Christoph Federrath, 2025
 
 import numpy as np
 
