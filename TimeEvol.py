@@ -15,7 +15,7 @@ def plot_var(variable,file_name):
 
     if not os.path.isdir(fig_path):
         cfp.run_shell_command('mkdir '+fig_path)
-    
+
     for i, path in enumerate(sim_paths):
 
         print(f'Working on: {path}', color='green')
