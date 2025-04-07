@@ -4,7 +4,8 @@
 
 import numpy as np
 
-sim_paths = ["../N256M5HDRe2500/"]
-t_turb = np.array([0.1, 0.1])
+sim_paths = ["../N256M5HDRe2500/","../N256M0p5HDRe2500/"]
+MachNumber = ["5","0.5"]
+t_turb = np.array([0.1, 1])
 color = ['r','b']
 fig_path = "../Figures/"
