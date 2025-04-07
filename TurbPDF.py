@@ -14,6 +14,29 @@ import glob
 import flashlib as fl
 from scipy.stats import binned_statistic_2d
 import dill
+import h5py
+
+# function to compute divv and vort, also checks if they already exist and runs only if they dont
+def derivative(filename, var):
+    fullpath = path + filename
+
+    # First check if we need to generate anything
+    with h5py.File(fullpath, "r") as f:
+        if not all(x in f for x in ['vort', 'divv']):
+            # Generate fields if missing
+            cfp.run_shell_command(f'derivative_var {fullpath} -vort -divv')
+
+    # Now reopen the file to see new content
+    with h5py.File(fullpath, "r+") as f:
+        if 'vort' in var and 'vort' not in f:
+            try:
+                vx = f["vorticity_x"][:]
+                vy = f["vorticity_y"][:]
+                vz = f["vorticity_z"][:]
+            except KeyError as e:
+                raise KeyError(f"Expected vorticity component missing after derivative_var: {e}")
+            vort = np.sqrt(vx**2 + vy**2 + vz**2)
+            f.create_dataset("vort", data=vort)
 
 
 def compute_pdf(path, variable):
@@ -79,7 +102,7 @@ def plot_pdf(pdf_dat):
 
 
 def compute_2d_pdf(filename, variables, bins, overwrite=False):
-    fname_pkl = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + ".pkl"
+    fname_pkl = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + "_" + "M" +MachNumber[i] + ".pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         # read data
         gg = fl.FlashGG(filename)
@@ -108,10 +131,16 @@ def plot_2Dpdf(po):
     out_path = path + "PDFs/"
     if not os.path.isdir(out_path):
         cfp.run_shell_command('mkdir '+out_path)
-    if po.variables[0] == "dens": xlabel = r"$\rho/\langle\rho\rangle$"
-    if po.variables[1] == "ekdr": ylabel=r'$\varepsilon_{\textrm{kin}}$'
+    if po.variables[0] == "dens": 
+        xlabel = r"$\rho/\langle\rho\rangle$"
+    if po.variables[0] == "divv": 
+        xlabel = r"$\nabla\cdot\mathbf{u}$"
+    if po.variables[0] == "vort": 
+        xlabel = r"$|\nabla\times\mathbf{u}|$"
+    if po.variables[1] == "ekdr": 
+        ylabel=r'$\varepsilon_{\textrm{kin}}$'
     cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel, cmap_label="PDF",
-                 log=True, xlog=True, ylog=True, save=out_path+'aver_2Dpdf_'+po.variables[0]+"_"+po.variables[1]+'.pdf')
+                 log=True, xlog=True, ylog=True, save=out_path+'averaged_2Dpdf_' + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] +'.pdf')
 
 
 if __name__ == "__main__":
@@ -128,7 +157,7 @@ if __name__ == "__main__":
     start_time = timeit.default_timer()
 
     # loop over simulations
-    for path in sim_paths:
+    for i,path in enumerate(sim_paths):
 
         print(f'Working on: {path}', color='green')
 
@@ -164,18 +193,20 @@ if __name__ == "__main__":
         # 2D PDFs
         if args.pdf2d:
             # variables for the 2d pdf plots, can add more.
-            vars_2Dpdf = [["dens", "ekdr"]]
+            vars_2Dpdf = [["vort", "ekdr"],["divv", "ekdr"],["dens", "ekdr"]]
             if "M5" in path: # supersonic
                 bins = np.array([np.logspace(-4, 3, 500), np.logspace(-5, 6, 500)])
             elif "M0p5" in path: # subsonic
                 bins = np.array([np.logspace(-4, 3, 500), np.logspace(-5, 6, 500)])
             # loop over simulation variables
             for var in vars_2Dpdf:
-                fname_pkl = "averaged_2Dpdf_" + var[0] + "_" + var[1] + ".pkl"
+                fname_pkl = "averaged_2Dpdf_" + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] + ".pkl"
                 if not os.path.isfile(fname_pkl) or args.overwrite:
                     pdf_data = []
-                    for d in range(20, 101):
+                    for d in range(51, 53):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
+                        if "vort" in var or "divv" in var:
+                            derivative(filename,var)
                         po = compute_2d_pdf(path+filename, var, bins=bins, overwrite=True)
                         pdf_data.append(po.pdf)
                     # setup a class to store edges and the averaged pdf data.
