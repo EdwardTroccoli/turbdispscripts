@@ -25,6 +25,10 @@ def compute_pdf(path, variable):
         vmin = -1e4
         vmax = +1e4
         bw = 20
+    elif variable == "dens":
+        vmin = 10**-0.5
+        vmax = +10**0.5
+        bw = 0.002
     elif variable == "emag":
         vmin = 0.00001
         vmax = +1e4
@@ -44,11 +48,11 @@ def compute_pdf(path, variable):
         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
         if variable in ['emag', 'ekin']:
             cfp.run_shell_command(f'mpirun -np 8 pdfs {path+filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw} -log')
-        elif variable in ["injr", "ekdr", "emdr"]: 
+        elif variable in ["injr", "ekdr", "emdr","dens"]: 
             cfp.run_shell_command(f'mpirun -np 8 pdfs {path+filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw}')
 
-def compute_2d_pdf(filename, variables, bins=np.array([np.linspace(0,10,20),np.linspace(0,10,20)]), overwrite=False):
-    out_filename = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + ".pkl"
+def compute_2d_pdf(filename, variables, bins, overwrite=False):
+    out_filename = filename + "_2Dpdf_" + variables[0][0] + "_" + variables[0][1] + ".pkl"
     if not os.path.isfile(out_filename) or overwrite:
         # read data
         gg = fl.FlashGG(filename)
@@ -76,22 +80,27 @@ def compute_2d_pdf(filename, variables, bins=np.array([np.linspace(0,10,20),np.l
 def plot_pdf(pdf_dat):
     if var == "ekdr":
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
-        cfp.plot(xlabel='Kinetic Energy Dissipation Rate', ylabel='PDF of Kinetic Energy Dissipation Rate', xlim = [-1e4,1e4], yerr = pdf_dat['col3'], shaded_err = np.array([pdf_dat['col3'], pdf_dat['col3']]), ylog = True, save=fig_path+"aver_"+var+'.pdf')
+        cfp.plot(xlabel='Kinetic Energy Dissipation Rate', ylabel='PDF of Kinetic Energy Dissipation Rate', xlim=[0,1e2], yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, ylog=True,  save=out_path+'aver_1DPDF_'+var+'.pdf')
     elif var == "emdr":
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
-        cfp.plot(xlabel="Magnetic Energy Dissipation Rate", ylabel='PDF of Magnetic Energy Dissipation Rate', yerr = pdf_dat['col3'], shaded_err = np.array([pdf_dat['col3'], pdf_dat['col3']]), xlim = [-1e4,1e4], ylog = True, save=fig_path+"aver_"+var+'.pdf') 
+        cfp.plot(xlabel="Magnetic Energy Dissipation Rate", ylabel='PDF of Magnetic Energy Dissipation Rate', yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlim=[-1e4,1e4], ylog=True,  save=out_path+'aver_1DPDF_'+var+'.pdf') 
+    elif var == "dens":
+        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
+        cfp.plot(xlabel=r"Density ($\rho/\langle\rho\rangle$)", ylabel=r"PDF of Density ($\rho/\langle\rho\rangle$)", yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlim=[1e-1,1e1], xlog=True, ylog=True,  save=out_path+'aver_1DPDF_'+var+'.pdf') 
     elif var == "injr":
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
-        cfp.plot(xlabel="Energy Injection Rate", ylabel='PDF of Energy Injection Rate', xlim = [-1e4,1e4], yerr = pdf_dat['col3'], shaded_err = np.array([pdf_dat['col3'], pdf_dat['col3']+1e2]), ylog = True, save=fig_path+"aver_"+var+'.pdf') 
+        cfp.plot(xlabel="Energy Injection Rate", ylabel='PDF of Energy Injection Rate', xlim=[-1e2,1e2], yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, ylog=True,  save=out_path+'aver_1DPDF_'+var+'.pdf') 
     elif var == "emag":
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
-        cfp.plot(xlabel="Magnetic Energy", ylabel='PDF of Magnetic Energy', xlim = [0.000001,250], yerr = pdf_dat['col3'], shaded_err = np.array([pdf_dat['col3'], pdf_dat['col3']]), ylog = True, save=fig_path+"aver_"+var+'.pdf') 
+        cfp.plot(xlabel="Magnetic Energy", ylabel='PDF of Magnetic Energy', xlim=[0.000001,250], yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, ylog=True,  save=out_path+'aver_1DPDF_'+var+'.pdf') 
     elif var == "ekin":
-        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
-        cfp.plot(xlabel="Kinetic Energy", ylabel='PDF of Kinetic Energy', xlim = [0,100], yerr = pdf_dat['col3'], ylog = True, save=fig_path+"aver_"+var+'.pdf')  
+        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'], xlabel="Kinetic Energy", ylabel='PDF of Kinetic Energy', xlim=[1e-3,1e2], yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlog=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')  
 
 def plot_2Dpdf(po):
-    cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, log=True, xlog=True, ylog=True, show=True)
+    out_path = path + "PDFs/"
+    if not os.path.isdir(out_path):
+        cfp.run_shell_command('mkdir '+out_path)
+    cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=r"Density ($\rho/\langle\rho\rangle$)", ylabel=r'$\varepsilon_{\textrm{kin}}$', log=True, xlog=True, ylog=True, save=out_path+'aver_2DPDF_'+variables[0][0]+"_"+variables[0][1]+'.pdf')
      
 
 if __name__ == "__main__":
@@ -109,9 +118,9 @@ if __name__ == "__main__":
     start_time = timeit.default_timer()
     
     #variables for the 1d pdf plots. yet to implement dens.
-    vars = ["ekin", "emag", "injr", "ekdr", "emdr"]
+    vars = ["dens","ekin", "injr", "ekdr"]
     #variables for the 2d pdf plots, can add more.
-    variables = ["dens", "ekdr"]
+    variables = [["dens", "ekdr"]]
 
     # loop over simulations
     if args.pdf1d:
@@ -119,35 +128,40 @@ if __name__ == "__main__":
             print(f'Working on: {path}', color='green')
             # loop over simulation variables
             for var in vars:
-                pdf_aver_file = "aver_"+var+".pdf_data"
+                pdf_aver_file = "aver_1DPDF_"+var+".pdf_data"
                 if args.overwrite:
                     compute_pdf(path, var) # compute the PDF by calling C++ 'pdf'
                     if var in ['emag', 'ekin']:
                         pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data_log")
                         aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
                         write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
-                    elif var in ["injr", "ekdr", "emdr"]: 
+                    elif var in ["injr", "ekdr", "emdr", "dens"]: 
                         pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data")
                         aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
                         write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
 
                 # plot the PDF
-                if not os.path.isdir(fig_path):
-                    cfp.run_shell_command('mkdir '+fig_path)
+                out_path = path + "PDFs/"
+                if not os.path.isdir(out_path):
+                    cfp.run_shell_command('mkdir '+out_path)
 
                 pdf_dat, pdf_header = read_pdf(pdf_aver_file) # read the PDF data
                 plot_pdf(pdf_dat)
-    #Trying to get loop for 2D PDFs to work.
+
     if args.pdf2d:
         for path in sim_paths:
             print(f'Working on: {path}', color='green')
+            if "M5" in path:
+                bins=np.array([np.logspace(-4, 5, 500), np.logspace(-4, 4, 500)])
+            elif "M0p5" in path:
+                bins=np.array([np.logspace(-4, 5, 500), np.logspace(-4, 4, 500)])
             # loop over simulation variables
             for var in variables:
                 if args.overwrite:
                     pdf_data = []
-                    for d in range(20, 101):
+                    for d in range(50, 51):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-                        po = compute_2d_pdf(path+filename, variables, bins=np.array([np.linspace(0,10,20),np.linspace(0,10,20)]), overwrite=True)
+                        po = compute_2d_pdf(path+filename, variables, bins=bins, overwrite=True)
                         pdf_data.append(po.pdf)   
                     #setup a class to store edges and the averaged pdf data.    
                     class PO:
@@ -157,13 +171,13 @@ if __name__ == "__main__":
                     po_avg.x_edges = po.x_edges
                     po_avg.y_edges = po.y_edges
                     # Save to file
-                    out_filename = "averaged_2Dpdf_" + variables[0] + "_" + variables[1] + ".pkl"
+                    out_filename = "averaged_2Dpdf_" + variables[0][0] + "_" + variables[0][1] + ".pkl"
                     with open(out_filename, "wb") as f:
                         dill.dump(po_avg, f)
                 # plot the PDF
                 if not os.path.isdir(fig_path):
                     cfp.run_shell_command('mkdir '+fig_path)
-                with open("averaged_2Dpdf_" + variables[0] + "_" + variables[1] + ".pkl", "rb") as f:
+                with open("averaged_2Dpdf_" + variables[0][0] + "_" + variables[0][1] + ".pkl", "rb") as f:
                     po_loaded = dill.load(f)
                 # Plot
                 plot_2Dpdf(po_loaded)   
