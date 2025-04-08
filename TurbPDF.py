@@ -16,31 +16,21 @@ from scipy.stats import binned_statistic_2d
 import dill
 import h5py
 
+
 # function to compute divv and vort, also checks if they already exist and runs only if they dont
-def derivative(filename, var):
-    full_path = path + filename
-
+def compute_divv_vort(filename, overwrite=False):
     # first check if we need to generate anything
-    with h5py.File(full_path, "r") as f:
-        if not all(x in f for x in ['vort', 'divv']):
-            # if plot file doesn't already contain -vort and -divv, this will generate them.
-            cfp.run_shell_command(f'derivative_var {full_path} -vort -divv')
+    run_derivative_var = False
+    with h5py.File(filename, "r") as f:
+        if not all(x in f for x in ['vorticity_x', 'vorticity_y', 'vorticity_z', 'divv']):
+            run_derivative_var = True
+    if run_derivative_var or overwrite:
+        # if plot file doesn't already contain -vort and -divv, this will generate them.
+        cfp.run_shell_command(f'mpirun -np 8 derivative_var {filename} -vort -divv')
 
-    # now reopen the file to see new content
-    with h5py.File(full_path, "r+") as f:
-        # runs only if vort is missing from the plot file
-        if 'vort' in var and 'vort' not in f:
-            try:
-                vx = f["vorticity_x"][:]
-                vy = f["vorticity_y"][:]
-                vz = f["vorticity_z"][:]
-            except KeyError as e:
-                raise KeyError(f"Expected vorticity component missing after derivative_var: {e}")
-            vort = np.sqrt(vx**2 + vy**2 + vz**2) # compute the magnitude of vorticity
-            f.create_dataset("vort", data=vort)
 
 # computes 1d_pdfs using C++ pdfs function
-def compute_1d_pdf(path, variable):
+def compute_1d_pdf(filename, variable):
     if variable == "ekdr":
         vmin = -1e4
         vmax = +1e4
@@ -67,13 +57,11 @@ def compute_1d_pdf(path, variable):
         bw = 20
     else:
         print("Variable not implemented.", error=True)
-    # loop over FLASH dump files
-    for d in range(20, 101):
-        filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-        if variable in ['emag', 'ekin']:
-            cfp.run_shell_command(f'mpirun -np 8 pdfs {path+filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw} -log')
-        elif variable in ["injr", "ekdr", "emdr", "dens"]:
-            cfp.run_shell_command(f'mpirun -np 8 pdfs {path+filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw}')
+    if variable in ['emag', 'ekin']:
+        cfp.run_shell_command(f'mpirun -np 8 pdfs {filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw} -log')
+    elif variable in ["injr", "ekdr", "emdr", "dens"]:
+        cfp.run_shell_command(f'mpirun -np 8 pdfs {filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw}')
+
 
 # plotting function for 1d pdfs
 def plot_1d_pdf(pdf_dat):
@@ -102,9 +90,9 @@ def plot_1d_pdf(pdf_dat):
                  yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlog=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
 
 
-def compute_2d_pdf(filename, variables, bins, overwrite=False):
+def compute_2d_pdf(filename, variables, bins):
     fname_pkl = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + "_" + "M" +MachNumber[i] + ".pkl"
-    if not os.path.isfile(fname_pkl) or overwrite:
+    if not os.path.isfile(fname_pkl):
         # read data
         gg = fl.FlashGG(filename)
         x = gg.ReadVar(dsets=variables)[0].flatten()
@@ -132,13 +120,13 @@ def plot_2Dpdf(po):
     out_path = path + "PDFs/"
     if not os.path.isdir(out_path):
         cfp.run_shell_command('mkdir '+out_path)
-    if po.variables[0] == "dens": 
+    if po.variables[0] == "dens":
         xlabel = r"$\rho/\langle\rho\rangle$"
-    if po.variables[0] == "divv": 
+    if po.variables[0] == "divv":
         xlabel = r"$\nabla\cdot\mathbf{v}$"
-    if po.variables[0] == "vort": 
+    if po.variables[0] == "vorticity":
         xlabel = r"$|\nabla\times\mathbf{v}|$"
-    if po.variables[1] == "ekdr": 
+    if po.variables[1] == "ekdr":
         ylabel=r'$\varepsilon_{\textrm{kin}}$'
     cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel, cmap_label="PDF",
                  log=True, xlog=True, ylog=True, save=out_path+'averaged_2Dpdf_' + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] +'.pdf')
@@ -158,7 +146,7 @@ if __name__ == "__main__":
     start_time = timeit.default_timer()
 
     # loop over simulations
-    for i,path in enumerate(sim_paths):
+    for i, path in enumerate(sim_paths):
 
         print(f'Working on: {path}', color='green')
 
@@ -173,7 +161,9 @@ if __name__ == "__main__":
             for var in vars_1Dpdf:
                 pdf_aver_file = "aver_1DPDF_"+var+".pdf_data"
                 if args.overwrite:
-                    compute_1d_pdf(path, var) # compute the PDF by calling C++ 'pdf'
+                    for d in range(20, 101, 10):
+                        filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
+                        compute_1d_pdf(path+filename, var) # compute the PDF by calling C++ 'pdf'
                     if vars_1Dpdf in ['emag', 'ekin']:
                         pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data_log")
                         aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
@@ -194,21 +184,25 @@ if __name__ == "__main__":
         # 2D PDFs
         if args.pdf2d:
             # variables for the 2d pdf plots, can add more.
-            vars_2Dpdf = [["vort", "ekdr"],["divv", "ekdr"],["dens", "ekdr"]]
-            if "M5" in path: # supersonic
-                bins = np.array([np.logspace(-4, 3, 500), np.logspace(-6, 6, 500)])
-            elif "M0p5" in path: # subsonic
-                bins = np.array([np.logspace(-4, 3, 500), np.logspace(-6, 6, 500)])
+            vars_2Dpdf = [["dens", "ekdr"], ["vorticity", "ekdr"], ["divv", "ekdr"]]
             # loop over simulation variables
             for var in vars_2Dpdf:
+                if var[0] == "dens":
+                    bins_x = np.logspace(-4, 3, 500)
+                if var[0] == "vorticity":
+                    bins_x = np.logspace(-2, 5, 500)
+                if var[0] == "divv":
+                    bins_x = cfp.symlogspace(-2, 5, 500)
+                if var[1] == "ekdr":
+                    bins_y = np.logspace(-6, 6, 500)
                 fname_pkl = "averaged_2Dpdf_" + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] + ".pkl"
                 if not os.path.isfile(fname_pkl) or args.overwrite:
                     pdf_data = []
-                    for d in range(51, 53):
+                    for d in range(50, 51, 10):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-                        if "vort" in var or "divv" in var:
-                            derivative(filename,var)
-                        po = compute_2d_pdf(path+filename, var, bins=bins, overwrite=True)
+                        if "vorticity" in var or "divv" in var:
+                            compute_divv_vort(path+filename, overwrite=False)
+                        po = compute_2d_pdf(path+filename, var, bins=[bins_x,bins_y])
                         pdf_data.append(po.pdf)
                     # setup a class to store edges and the averaged pdf data.
                     class ret:
