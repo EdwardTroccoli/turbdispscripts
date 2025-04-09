@@ -15,6 +15,7 @@ import flashlib as fl
 from scipy.stats import binned_statistic_2d
 import dill
 import h5py
+from pathlib import Path
 
 
 # function to compute divv and vort, also checks if they already exist and runs only if they dont
@@ -90,9 +91,10 @@ def plot_1d_pdf(pdf_dat):
                  yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlog=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
 
 
-def compute_2d_pdf(filename, variables, bins):
-    fname_pkl = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + "_" + "M" +MachNumber[i] + ".pkl"
-    if not os.path.isfile(fname_pkl):
+def compute_2d_pdf(filename, variables, bins, overwrite=False):
+    #fname_pkl = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + "_" + "M" +MachNumber[i] + ".pkl"
+    fname_pkl = out_path + f"{Path(filename).stem}_2Dpdf_{variables[0]}_{variables[1]}_M{MachNumber[i]}.pkl"
+    if not os.path.isfile(fname_pkl) or overwrite:
         # read data
         gg = fl.FlashGG(filename)
         x = gg.ReadVar(dsets=variables)[0].flatten()
@@ -128,9 +130,11 @@ def plot_2Dpdf(po):
         xlabel = r"$|\nabla\times\mathbf{v}|$"
     if po.variables[1] == "ekdr":
         ylabel=r'$\varepsilon_{\textrm{kin}}$'
-    cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel, cmap_label="PDF",
-                 log=True, xlog=True, ylog=True, save=out_path+'averaged_2Dpdf_' + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] +'.pdf')
-
+    ret = cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel, cmap_label="PDF",
+                 log=True, xlog=True, ylog=True)
+    cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=xlabel, ylabel=ylabel, text=r"$\mathcal{M}=$ "+MachNumber[i], 
+             color='black', normalised_coords=True, legend_loc='upper right',
+             save=out_path+'averaged_2Dpdf_' + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] +'.pdf')
 
 if __name__ == "__main__":
 
@@ -150,9 +154,10 @@ if __name__ == "__main__":
 
         print(f'Working on: {path}', color='green')
 
-        # creates the figure output dir
-        if not os.path.isdir(fig_path):
-            cfp.run_shell_command('mkdir '+fig_path)
+        # creates the file output dir
+        out_path = path + "PDFs/"
+        if not os.path.isdir(out_path):
+            cfp.run_shell_command('mkdir '+out_path)
 
         # 1D PDFs
         if args.pdf1d:
@@ -173,11 +178,6 @@ if __name__ == "__main__":
                         aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
                         write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
 
-                # plot the PDF
-                out_path = path + "PDFs/"
-                if not os.path.isdir(out_path):
-                    cfp.run_shell_command('mkdir '+out_path)
-
                 pdf_dat, pdf_header = read_pdf(pdf_aver_file) # read the PDF data
                 plot_1d_pdf(pdf_dat)
 
@@ -190,19 +190,19 @@ if __name__ == "__main__":
                 if var[0] == "dens":
                     bins_x = np.logspace(-4, 3, 500)
                 if var[0] == "vorticity":
-                    bins_x = np.logspace(-2, 5, 500)
+                    bins_x = np.logspace(-1, 4, 500)
                 if var[0] == "divv":
-                    bins_x = cfp.symlogspace(-2, 5, 500)
+                    bins_x = cfp.symlogspace(-2, 4, 500)
                 if var[1] == "ekdr":
                     bins_y = np.logspace(-6, 6, 500)
-                fname_pkl = "averaged_2Dpdf_" + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] + ".pkl"
+                fname_pkl = out_path+"averaged_2Dpdf_" + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] + ".pkl"
                 if not os.path.isfile(fname_pkl) or args.overwrite:
                     pdf_data = []
-                    for d in range(50, 51, 10):
+                    for d in range(20, 101):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
                         if "vorticity" in var or "divv" in var:
                             compute_divv_vort(path+filename, overwrite=False)
-                        po = compute_2d_pdf(path+filename, var, bins=[bins_x,bins_y])
+                        po = compute_2d_pdf(path+filename, var, bins=[bins_x,bins_y],overwrite = args.overwrite)
                         pdf_data.append(po.pdf)
                     # setup a class to store edges and the averaged pdf data.
                     class ret:
