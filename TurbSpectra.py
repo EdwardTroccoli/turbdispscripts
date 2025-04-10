@@ -31,9 +31,9 @@ def plot_spectra(pdf_dat):
         cfp.plot(xlabel='Kinetic Energy Dissipation Rate', ylabel='PDF of Kinetic Energy Dissipation Rate', 
                  ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
     elif var == "vels":
-        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col5'])
+        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col6'])
         cfp.plot(xlabel=r'Wavenumber $\mathrm{k}$', ylabel='Velocity',
-                xlog=True, show=True)
+                xlog=True, save=out_path+'averaged_spectra'+ "_" + var + "_" + "M" +MachNumber[i] +'.pdf')
 
 
 if __name__ == "__main__":
@@ -59,9 +59,9 @@ if __name__ == "__main__":
         # loop over simulation variables
         vars = ['vels']
         for var in vars:
-            spectra_aver_file = "aver_spectra_"+var+".dat"
+            spectra_aver_file = "aver_spectra_"+var+"_M"+MachNumber[i]+".dat"
             if args.overwrite:
-                for d in range(20, 23):
+                for d in range(20, 101):
                     filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
                     compute_spectra(path+filename) # compute the spectra by calling C++ 'spectra'
                 if var == 'vels':
