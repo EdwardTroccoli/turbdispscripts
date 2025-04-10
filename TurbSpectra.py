@@ -4,36 +4,36 @@
 
 import argparse
 import timeit
-import os
+import os, time
 import cfpack as cfp
 from cfpack.defaults import *
 from turblib import aver_spect, write_spect, read_spect
 from Globals import *
 import glob
-import flashlib as fl
 
 # computes spectra using C++ pdfs function
-def compute_spectra(filename):
+def compute_spectra(filename, out_path='./'):
     # Define expected output files
-    base = os.path.splitext(filename)[0]
-    output_file_1 = f"{base}_spect_vels.dat"
-    output_file_2 = f"{base}_spect_dset_ekdr.dat"
-
-    # Check if both files exist
-    if not (os.path.exists(output_file_1) and os.path.exists(output_file_2)):
-        # If either file is missing, run the spectra command
+    output_files = [filename.split('/')[-1]+"_spect_vels.dat", filename.split('/')[-1]+"_spect_dset_ekdr.dat"]
+    # Check if file exists
+    if not (os.path.exists(out_path+output_files[0]) and os.path.exists(out_path+output_files[1])):
+        # run the spectra command
         cfp.run_shell_command(f'mpirun -np 8 spectra {filename} -types 0 1 -dsets ekdr')
+        time.sleep(0.1)
+        for outfile in output_files:
+            cfp.run_shell_command("mv "+outfile+" "+out_path)
+
 
 # plotting function for spectras
-def plot_spectra(pdf_dat):
-    if var == "ekdr":
-        cfp.plot(x=pdf_dat['col2'], y=pdf_dat['col8'])
-        cfp.plot(xlabel='Kinetic Energy Dissipation Rate', ylabel='PDF of Kinetic Energy Dissipation Rate', 
-                 ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
-    elif var == "vels":
-        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col6'])
-        cfp.plot(xlabel=r'Wavenumber $\mathrm{k}$', ylabel='Velocity',
-                xlog=True, save=out_path+'averaged_spectra'+ "_" + var + "_" + "M" +MachNumber[i] +'.pdf')
+def plot_spectra(dat, var):
+    if var == "vels": ylabel=r'Power spectrum of $E_\mathrm{kin}$'
+    if var == "ekdr": ylabel=r'Power spectrum of $\varepsilon_\mathrm{kin}$'
+    y = 10**dat['col6']
+    sigylo = y - 10**(dat['col6']-dat['col7'])
+    sigyup = 10**(dat['col6']+dat['col7']) - y
+    cfp.plot(x=dat['col1'], y=y, yerr=[sigylo,sigyup], shaded_err=True)
+    cfp.plot(xlabel=r'Wavenumber $\mathrm{k}$', ylabel=ylabel, xlog=True, ylog=True,
+            save=out_path+'averaged_spectra'+ "_" + var + "_" + "M" +MachNumber[i] +'.pdf')
 
 
 if __name__ == "__main__":
@@ -55,29 +55,32 @@ if __name__ == "__main__":
         # creates the figure output dir
         if not os.path.isdir(fig_path):
             cfp.run_shell_command('mkdir '+fig_path)
-        
-        # loop over simulation variables
-        vars = ['vels']
-        for var in vars:
-            spectra_aver_file = "aver_spectra_"+var+"_M"+MachNumber[i]+".dat"
-            if args.overwrite:
-                for d in range(20, 101):
-                    filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-                    compute_spectra(path+filename) # compute the spectra by calling C++ 'spectra'
-                if var == 'vels':
-                    spectra_files = sorted(glob.glob(path + "*_spect_vels.dat"))
-                elif var == 'ekdr':
-                    spectra_files = sorted(glob.glob(path + "*_spect_dset_ekdr.dat"))
-                aver_dat, header_aver = aver_spect(spectra_files) # average the spectras
-                write_spect(spectra_aver_file, aver_dat, header_aver) # write averaged spectra
 
-        # plot the spectra
-        out_path = path + "spectras/"
+        # create output dir for spectra
+        out_path = path + "spectra/"
         if not os.path.isdir(out_path):
             cfp.run_shell_command('mkdir '+out_path)
 
-        spectra_dat, spectra_header = read_spect(spectra_aver_file) # read the PDF data
-        plot_spectra(spectra_dat)
+        # loop over simulation variables
+        vars = ['vels', 'ekdr']
+        for var in vars:
+            spectra_aver_file = out_path+"aver_spectra_"+var+"_M"+MachNumber[i]+".dat"
+            if not os.path.isfile(spectra_aver_file) or args.overwrite:
+                for d in range(20, 101, 10):
+                    filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
+                    compute_spectra(path+filename, out_path=out_path) # compute the spectra by calling C++ 'spectra'
+                if var == 'vels':
+                    spectra_files = sorted(glob.glob(out_path+"*_spect_vels.dat"))
+                elif var == 'ekdr':
+                    spectra_files = sorted(glob.glob(out_path+"*_spect_dset_ekdr.dat"))
+                aver_dat, header_aver = aver_spect(spectra_files) # average the spectras
+                write_spect(spectra_aver_file, aver_dat, header_aver) # write averaged spectra
+
+            # plot the spectra
+            spectra_dat, spectra_header = read_spect(spectra_aver_file) # read the PDF data
+            plot_spectra(spectra_dat, var)
+        stop()
+
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
     print("Processing time: {:.2f}s".format(stop_time - start_time))
