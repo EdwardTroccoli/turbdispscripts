@@ -23,20 +23,26 @@ def plot_variable(files, out_path, variable, tturb):
         log = True
         vmin = 1e-2
         vmax = 1e2
-
+        if float(MachNumber[i])<=1:
+            M = '(subsonic)'
+        elif float(MachNumber[i])>1:
+            M = '(supersonic)'
         if variable == "dens":
             var = hdfio.read(filen, "dens_slice_xy")
-            cmap_label = r"Density ($\rho/\langle\rho\rangle$)"
+            title = r"Density"+ M
+            cmap_label = r'($\rho/\langle\rho\rangle$)'
         elif variable == "ekin":
             dens = hdfio.read(filen, "dens_slice_xy")
             velx = hdfio.read(filen, "velx_slice_xy")
             vely = hdfio.read(filen, "vely_slice_xy")
             velz = hdfio.read(filen, "velz_slice_xy")
             var = 0.5 * dens * (velx ** 2 + vely ** 2 + velz ** 2)
-            cmap_label = r"Kinetic energy density"
+            title = r"Kinetic energy" + M
+            cmap_label = r"$e_{\textrm{kin}}$"
         elif variable == "ekdr":
             var = hdfio.read(filen, "ekdr_slice_xy")
-            cmap_label = r"Kinetic energy dissipation rate"
+            cmap_label = r"$\varepsilon_{\textrm{kin}}$"
+            title = r"Dissipation rate" + M
             log = False
             vmin = -1e4
             vmax = 1e4
@@ -59,12 +65,12 @@ def plot_variable(files, out_path, variable, tturb):
         out_file = out_path+f"frame_{variable}_{i:06d}.png"
 
         # Plot and save the image
-        ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, cmap='afmhot', xlabel=r"$x$", ylabel=r"$y$", xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
+        ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, title=title, cmap='afmhot', xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
 
         # Roundabout way to add the time label
         time = hdfio.read(filen, "time")[0] / tturb
         time_str = cfp.round(time, 3, str_ret=True)
-        cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=r"$x$", ylabel=r"$y$", text=r"$t/t_\mathrm{turb}="+time_str+r"$", color='white', normalised_coords=True, save=out_file)
+        cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, text=r"$t/t_\mathrm{turb}="+time_str+r"$", color='white', normalised_coords=True, save=out_file)
 
 
 if __name__ == "__main__":
