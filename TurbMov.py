@@ -65,7 +65,7 @@ def plot_variable(files, out_path, variable, tturb):
         out_file = out_path+f"frame_{variable}_{i:06d}.png"
 
         # Plot and save the image
-        ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, title=title, cmap='afmhot', xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
+        ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, cmap='afmhot', xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
 
         # Roundabout way to add the time label
         time = hdfio.read(filen, "time")[0] / tturb
@@ -88,12 +88,12 @@ if __name__ == "__main__":
     # loop over simulations
     for i, path in enumerate(sim_paths):
 
-        out_path = path + "MovieFrames/"
+        out_path = path + "movie_frames/"
         if not os.path.isdir(out_path):
             cfp.run_shell_command('mkdir '+out_path)
 
         # Get all files matching the pattern Turb_slice_xy_*
-        files = sorted(glob.glob(path+"Turb_slice_xy_*"))
+        files = sorted(glob.glob(out_path+"Turb_slice_xy_*"))
         #files = sorted(glob.glob(path+"Turb_slice_xy_00000"))
 
         # call plot function
