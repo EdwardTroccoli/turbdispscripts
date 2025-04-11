@@ -14,14 +14,15 @@ import glob
 # computes spectra using C++ pdfs function
 def compute_spectra(filename, out_path='./'):
     # Define expected output files
+    extensions = ["_spect_vels.dat", "_spect_dset_ekdr.dat"]
     output_files = [filename.split('/')[-1]+"_spect_vels.dat", filename.split('/')[-1]+"_spect_dset_ekdr.dat"]
     # Check if file exists
-    if not (os.path.exists(out_path+output_files[0]) and os.path.exists(out_path+output_files[1])):
+    if not (os.path.exists(out_path+filename.split('/')[-1]+extensions[0]) and os.path.exists(out_path+filename.split('/')[-1]+extensions[1])):
         # run the spectra command
         cfp.run_shell_command(f'mpirun -np 8 spectra {filename} -types 0 1 -dsets ekdr')
         time.sleep(0.1)
-        for outfile in output_files:
-            cfp.run_shell_command("mv "+outfile+" "+out_path)
+        for ext in extensions:
+            cfp.run_shell_command("mv "+filename+ext+" "+out_path)
 
 
 # plotting function for spectras
@@ -33,7 +34,7 @@ def plot_spectra(dat, var):
     sigyup = 10**(dat['col6']+dat['col7']) - y
     cfp.plot(x=dat['col1'], y=y, yerr=[sigylo,sigyup], shaded_err=True)
     cfp.plot(xlabel=r'Wavenumber $\mathrm{k}$', ylabel=ylabel, xlog=True, ylog=True,
-            save=out_path+'averaged_spectra'+ "_" + var + "_" + "M" +MachNumber[i] +'.pdf')
+            save=out_path+'aver_spectra'+ "_" + var + "_" + "M" +MachNumber[i] +'.pdf')
 
 
 if __name__ == "__main__":
@@ -79,7 +80,6 @@ if __name__ == "__main__":
             # plot the spectra
             spectra_dat, spectra_header = read_spect(spectra_aver_file) # read the PDF data
             plot_spectra(spectra_dat, var)
-        stop()
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
