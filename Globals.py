@@ -7,5 +7,5 @@ import numpy as np
 sim_paths = ["../N512M10HDRe5000/","../N512M0p1HDRe5000/"]
 MachNumber = ["10","0.1"]
 t_turb = np.array([0.05, 5])
-color = ['r','b']
+color = ['r','b','g']
 fig_path = "../Figures/"
