@@ -18,7 +18,7 @@ def plot_var(variable,path):
 
     dat = cfp.read_ascii(path+"Turb.dat")
     time = dat['01_time'] / t_turb[i]
-        
+     
     if variable == "vstd":
         var = dat['#14_rms_velocity']
         ylabel = r'$\sigma_v$'
@@ -57,7 +57,7 @@ def plot_var(variable,path):
     out_path = path + "TimeEvol/"
     if not os.path.isdir(out_path):
         cfp.run_shell_command('mkdir '+out_path)
-    cfp.plot(xlabel=r'$t/t_\mathrm{turb}$', ylabel=ylabel, save=out_path+"tevol_"+f"{variable}.pdf", legend_loc='best')
+    cfp.plot(xlabel=r'$t/t_\mathrm{turb}$', ylabel=ylabel, save=out_path+"tevol_"+f"{variable}_M"+MachNumber[i]+".pdf", legend_loc='best')
 
 
 if __name__ == "__main__":
