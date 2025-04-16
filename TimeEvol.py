@@ -50,7 +50,7 @@ def plot_var(variable,path):
     elif variable == "ired":
         injr = dat['#41_injection_rate']
         ekdr = dat['#42_ekin_diss_rate']
-        ylabel = r'$\varepsilon_{\textrm{kin}}$ and Injection Rate'
+        ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}}$'
         cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color=color[i])
         cfp.plot(x=time, y=ekdr, label=r'$\varepsilon_{\textrm{kin}}$', color=color[i+1])
     

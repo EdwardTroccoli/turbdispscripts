@@ -63,11 +63,11 @@ if __name__ == "__main__":
             cfp.run_shell_command('mkdir '+out_path)
 
         # loop over simulation variables
-        vars = ['vels', 'ekdr']
+        vars = ['ekdr', 'vels']
         for var in vars:
             spectra_aver_file = out_path+"aver_spectra_"+var+"_M"+MachNumber[i]+".dat"
             if not os.path.isfile(spectra_aver_file) or args.overwrite:
-                for d in range(20, 101, 10):
+                for d in range(20, 101, 1):
                     filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
                     compute_spectra(path+filename, out_path=out_path) # compute the spectra by calling C++ 'spectra'
                 if var == 'vels':
