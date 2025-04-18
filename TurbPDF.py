@@ -186,19 +186,30 @@ if __name__ == "__main__":
             # variables for the 2d pdf plots, can add more.
             vars_2Dpdf = [["dens", "ekdr"], ["vorticity", "ekdr"], ["divv", "ekdr"]]
             # loop over simulation variables
+            
             for var in vars_2Dpdf:
-                if var[0] == "dens":
-                    bins_x = np.logspace(-4, 3, 500)
-                if var[0] == "vorticity":
-                    bins_x = np.logspace(-1, 4, 500)
-                if var[0] == "divv":
-                    bins_x = cfp.symlogspace(-2, 4, 500)
-                if var[1] == "ekdr":
-                    bins_y = np.logspace(-6, 6, 500)
+                if '0p2' in out_path:
+                    if var[0] == "dens":
+                        bins_x = np.linspace(0.85, 1.15, 500)
+                    if var[0] == "vorticity":
+                        bins_x = np.logspace(-1, 2, 500)
+                    if var[0] == "divv":
+                        bins_x = cfp.symlogspace(-2, 2, 500)
+                    if var[1] == "ekdr":
+                        bins_y = np.logspace(-6, 3, 500)
+                elif '5' in out_path:
+                    if var[0] == "dens":
+                        bins_x = np.logspace(-4, 3, 500)
+                    if var[0] == "vorticity":
+                        bins_x = np.logspace(-1, 4, 500)
+                    if var[0] == "divv":
+                        bins_x = cfp.symlogspace(-2, 4, 500)
+                    if var[1] == "ekdr":
+                        bins_y = np.logspace(-6, 6, 500)
                 fname_pkl = out_path+"averaged_2Dpdf_" + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] + ".pkl"
                 if not os.path.isfile(fname_pkl) or args.overwrite:
                     pdf_data = []
-                    for d in range(20, 101):
+                    for d in range(20, 101, 10):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
                         if "vorticity" in var or "divv" in var:
                             compute_divv_vort(path+filename, overwrite=False)
