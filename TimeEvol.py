@@ -21,7 +21,7 @@ def plot_var(variable,path):
      
     if variable == "vstd":
         var = dat['#14_rms_velocity']
-        ylabel = r'$\sigma_v$'
+        ylabel = r'$\mathcal{M}$'
         cfp.plot(x=time, y=var, label=path[3:-1], color=color[i])
     elif variable == "ekin":
         var = dat['#10_E_kinetic']
