@@ -16,6 +16,7 @@ from scipy.stats import binned_statistic_2d
 import dill
 import h5py
 from pathlib import Path
+import gc
 
 
 # function to compute divv and vort, also checks if they already exist and runs only if they dont
@@ -96,18 +97,24 @@ def compute_2d_pdf(filename, variables, bins, overwrite=False):
     if not os.path.isfile(fname_pkl) or overwrite:
         # read data
         gg = fl.FlashGG(filename)
+        print("reading x data...")
         x = gg.ReadVar(dsets=variables)[0].flatten()
+        print("reading y data...")
         y = gg.ReadVar(dsets=variables)[1].flatten()
+        print("computing binned_statistic_2d...")
+        counts_, x_edges_, y_edges_, binnum_ = binned_statistic_2d(x, y, np.ones_like(x, dtype=np.float32), statistic='count', bins=bins)
+        del x; del y; del binnum_
+        gc.collect()
         class ret:
             # compute 2D counts
-            counts, x_edges, y_edges, binnumber = binned_statistic_2d(x, y, np.ones_like(x, dtype=np.float32), statistic='count', bins=bins)
+            counts, x_edges, y_edges, = counts_, x_edges_, y_edges_
             # compute bin areas for normalization
             dx = np.diff(x_edges)[0]  # bin width in x
             dy = np.diff(y_edges)[0]  # bin width in y
             bin_area = dx * dy
             # normalize to get PDF (probability density)
             pdf = counts / (np.sum(counts) * bin_area)  # ensures sum(pdf * bin_area) = 1
-            # save the data to file
+        # save the data to file
         with open(fname_pkl, "wb") as fobj:
             print("Writing '"+fname_pkl+"'", color="magenta")
             dill.dump(ret, fobj, protocol = 4)
