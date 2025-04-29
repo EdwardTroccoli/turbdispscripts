@@ -29,7 +29,6 @@ def compute_divv_vort(filename, overwrite=False):
         # if plot file doesn't already contain -vort and -divv, this will generate them.
         cfp.run_shell_command(f'mpirun -np 8 derivative_var {filename} -vort -divv')
 
-
 # computes 1d_pdfs using C++ pdfs function
 def compute_1d_pdf(filename, variable):
     if variable == "ekdr":
@@ -111,14 +110,13 @@ def compute_2d_pdf(filename, variables, bins, overwrite=False):
             # save the data to file
         with open(fname_pkl, "wb") as fobj:
             print("Writing '"+fname_pkl+"'", color="magenta")
-            dill.dump(ret, fobj)
+            dill.dump(ret, fobj, protocol = 4)
     else:
         print("Read '"+fname_pkl+"'", color="green")
         ret = dill.load(open(fname_pkl, "rb"))
     return ret
 
-
-def plot_2Dpdf(po):
+def plot_2Dpdf(po, MachNumber):
     out_path = path + "PDFs/"
     if not os.path.isdir(out_path):
         cfp.run_shell_command('mkdir '+out_path)
@@ -130,9 +128,13 @@ def plot_2Dpdf(po):
         xlabel = r"$|\nabla\times\mathbf{v}|$"
     if po.variables[1] == "ekdr":
         ylabel=r'$\varepsilon_{\textrm{kin}}$'
+    if '0p2' == MachNumber[i]:
+        Mach = '0.2'
+    elif '5' ==  MachNumber[i]:
+        Mach = '5'
     ret = cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel, cmap_label="PDF",
                  log=True, xlog=True, ylog=True)
-    cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=xlabel, ylabel=ylabel, text=r"$\mathcal{M}=$ "+MachNumber[i], 
+    cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=xlabel, ylabel=ylabel, text=r"$\mathcal{M}=$ "+Mach, 
              color='black', normalised_coords=True, legend_loc='upper right',
              save=out_path+'averaged_2Dpdf_' + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] +'.pdf')
 
@@ -164,9 +166,9 @@ if __name__ == "__main__":
             # loop over simulation variables
             vars_1Dpdf = ["dens", "ekin", "injr", "ekdr"]
             for var in vars_1Dpdf:
-                pdf_aver_file = "aver_1DPDF_"+var+".pdf_data"
+                pdf_aver_file = "aver_1DPDF_"+var+ "_" + "M" +MachNumber[i] + ".pdf_data"
                 if args.overwrite:
-                    for d in range(20, 101, 10):
+                    for d in range(20, 101):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
                         compute_1d_pdf(path+filename, var) # compute the PDF by calling C++ 'pdf'
                     if vars_1Dpdf in ['emag', 'ekin']:
@@ -190,18 +192,18 @@ if __name__ == "__main__":
             for var in vars_2Dpdf:
                 if '0p2' in out_path:
                     if var[0] == "dens":
-                        bins_x = np.linspace(0.85, 1.15, 500)
+                        bins_x = np.logspace(-4, 3, 500)
                     if var[0] == "vorticity":
                         bins_x = np.logspace(-1, 2, 500)
                     if var[0] == "divv":
-                        bins_x = cfp.symlogspace(-2, 2, 500)
+                        bins_x = cfp.symlogspace(-1, 1, 500)
                     if var[1] == "ekdr":
-                        bins_y = np.logspace(-6, 3, 500)
+                        bins_y = np.logspace(-7, 2, 500)
                 elif '5' in out_path:
                     if var[0] == "dens":
                         bins_x = np.logspace(-4, 3, 500)
                     if var[0] == "vorticity":
-                        bins_x = np.logspace(-1, 4, 500)
+                        bins_x = np.logspace(-2, 4, 500)
                     if var[0] == "divv":
                         bins_x = cfp.symlogspace(-2, 4, 500)
                     if var[1] == "ekdr":
@@ -209,7 +211,7 @@ if __name__ == "__main__":
                 fname_pkl = out_path+"averaged_2Dpdf_" + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] + ".pkl"
                 if not os.path.isfile(fname_pkl) or args.overwrite:
                     pdf_data = []
-                    for d in range(20, 101, 10):
+                    for d in range(20, 101, 1):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
                         if "vorticity" in var or "divv" in var:
                             compute_divv_vort(path+filename, overwrite=False)
@@ -228,7 +230,7 @@ if __name__ == "__main__":
                     print("Read '"+fname_pkl+"'", color="green")
                     ret = dill.load(open(fname_pkl, "rb"))
                 # Plot
-                plot_2Dpdf(ret)
+                plot_2Dpdf(ret, MachNumber)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
