@@ -22,10 +22,11 @@ def plot_variable(files, out_path, variable, tturb):
         # defaults
         log = True
         cmap = 'afmhot'
-
+        xlabel = None
+        ylabel = None
         if '0p2' in out_path:
             M = '(subsonic)'
-            ekdr_max = 0.3
+            ekdr_max = 0.25
             dens_min = 0.95
             dens_max = 1.035
             ekin_min = 1e-4
@@ -33,7 +34,7 @@ def plot_variable(files, out_path, variable, tturb):
             log = False
         elif '5' in out_path:
             M = '(supersonic)'
-            ekdr_max = 1e4
+            ekdr_max = 2e2
             dens_min = 1e-2
             dens_max = 1e2
             ekin_min = 1e-2
@@ -45,8 +46,13 @@ def plot_variable(files, out_path, variable, tturb):
             vmax = dens_max
             var = hdfio.read(filen, "dens_slice_xy")
             title = r"Density "+ M
-            cmap_label = r'($\rho/\langle\rho\rangle$)'
+            if '0p2' in out_path:
+                cmap_label = None
+                ylabel = r'$y$'
+            elif '5' in out_path:
+                cmap_label = r'$\rho/\langle\rho\rangle$'
         elif variable == "ekin":
+            cmap = 'RdPu'
             vmin = ekin_min
             vmax = ekin_max
             dens = hdfio.read(filen, "dens_slice_xy")
@@ -55,15 +61,26 @@ def plot_variable(files, out_path, variable, tturb):
             velz = hdfio.read(filen, "velz_slice_xy")
             var = 0.5 * dens * (velx ** 2 + vely ** 2 + velz ** 2)
             title = r"Kinetic energy " + M
-            cmap_label = r"$E_{\textrm{kin}}$"
+            if '0p2' in out_path:
+                cmap_label = None
+                ylabel = r'$y$'
+            elif '5' in out_path:
+                cmap_label = r"$E_{\textrm{kin}}/(\langle\rho\rangle\, c_{\textrm{s}}^2)$"
         elif variable == "ekdr":
-            var = hdfio.read(filen, "ekdr_slice_xy")
-            cmap_label = r"$\varepsilon_{\textrm{kin}}$"
             title = r"Dissipation rate " + M
-            #cmap = 'seismic'
+            cmap = 'BuPu'
             log = False
             vmin = 0
             vmax = ekdr_max
+            if '0p2' in out_path:
+                cmap_label = None
+                ylabel = r'$y$'
+                xlabel = r'$x$'
+                var = hdfio.read(filen, "ekdr_slice_xy")*tturb
+            elif '5' in out_path:
+                xlabel = r'$x$'
+                cmap_label = r"$\varepsilon_{\textrm{kin}}//(\langle\rho\rangle\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1})$"
+                var = hdfio.read(filen, "ekdr_slice_xy")*tturb
         elif variable == "emag":
             magx = hdfio.read(filen, "magx_slice_xy")
             magy = hdfio.read(filen, "magy_slice_xy")
@@ -80,7 +97,8 @@ def plot_variable(files, out_path, variable, tturb):
             print("Variable not implemented.", error=True)
 
         # Define formatted filename correctly
-        out_file = out_path+f"frame_{variable}_{i:06d}.png"
+        #out_file = out_path+f"frame_{variable}_{i:06d}.png"
+        out_file = out_path+f"frame_{variable}_000250.png"
 
         # Plot and save the image
         ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, cmap=cmap, xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
@@ -92,7 +110,7 @@ def plot_variable(files, out_path, variable, tturb):
         # Adding time label
         time = hdfio.read(filen, "time")[0] / tturb
         time_str = cfp.round(time, 3, str_ret=True)
-        cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=None, ylabel=None, text=r"$t/t_\mathrm{turb}="+time_str+r"$", color='white', normalised_coords=True, save=out_file)
+        cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=xlabel, ylabel=ylabel, text=r"$t/t_\mathrm{turb}="+time_str+r"$", color='white', normalised_coords=True, save=out_file)
 
 
 if __name__ == "__main__":
@@ -118,9 +136,9 @@ if __name__ == "__main__":
                 cfp.run_shell_command('mkdir '+out_path)
 
             # Get all files matching the pattern Turb_slice_xy_*
-            files = sorted(glob.glob(out_path+"Turb_slice_xy_*"))
-            #files = sorted(glob.glob(path+"Turb_slice_xy_00000"))
-
+            #files = sorted(glob.glob(out_path+"Turb_slice_xy_*"))
+            files = sorted(glob.glob(out_path+"Turb_slice_xy_000250"))
+            
             # call plot function
             plot_variable(files, out_path, var, t_turb[i])
 
