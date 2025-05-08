@@ -11,22 +11,38 @@ from cfpack.defaults import *
 from Globals import *
 
 
-def plot_var(variable,path):
+def plot_var(variable,path,Mach):
 
     if not os.path.isdir(fig_path):
         cfp.run_shell_command('mkdir '+fig_path)
-
+    out_path = path + "TimeEvol/"
+    if not os.path.isdir(out_path):
+        cfp.run_shell_command('mkdir '+out_path)
     dat = cfp.read_ascii(path+"Turb.dat")
     time = dat['01_time'] / t_turb[i]
-     
+    xlabel = None
     if variable == "vstd":
+        if '0p2' in out_path:
+            ylabel = r'$\mathcal{M}$'
+            ylim = [0,0.25]
+            remove_x_ticks = True
+        elif '5' in out_path:
+            ylabel = None
+            ylim = [0,6.5]
+            remove_x_ticks = True
         var = dat['#14_rms_velocity']
-        ylabel = r'$\mathcal{M}$'
-        cfp.plot(x=time, y=var, label=path[3:-1], color=color[i])
+        ret = cfp.plot(x=time, y=var, color=color[i])
     elif variable == "ekin":
         var = dat['#10_E_kinetic']
-        ylabel = r'$E_\mathrm{kin}$'
-        cfp.plot(x=time, y=var, label=path[3:-1], color=color[i])
+        if '0p2' in out_path:
+            ylabel = r'$E_\mathrm{kin}$' 
+            ylim = [0,0.025]
+            remove_x_ticks = True
+        elif '5' in out_path:
+            ylabel = None
+            ylim = [0,16]
+            remove_x_ticks = True
+        ret = cfp.plot(x=time, y=var, color=color[i])
     elif variable == "emag":
         var = dat['#12_E_magnetic']
         ylabel = r'$E_\mathrm{mag}$'
@@ -38,7 +54,7 @@ def plot_var(variable,path):
     elif variable == "ekdr":
         var = dat['#42_ekin_diss_rate']
         ylabel = r'$\varepsilon_{\textrm{kin}}$'
-        cfp.plot(x=time, y=var, label=path[3:-1], color=color[i])
+        ret = cfp.plot(x=time, y=var, color=color[i])
     elif variable == "emdr":
         var = dat['#43_emag_diss_rate']
         ylabel = r'magnetic energy dissipation rate'
@@ -46,18 +62,28 @@ def plot_var(variable,path):
     elif variable == "etdr":
         var = dat['#42_ekin_diss_rate'] + dat['#43_emag_diss_rate']
         ylabel = r'total energy dissipation rate'
-        cfp.plot(x=time, y=var, label=path[3:-1], color=color[i])
+        ret = cfp.plot(x=time, y=var, label=Mach, color=color[i])
     elif variable == "ired":
         injr = dat['#41_injection_rate']
         ekdr = dat['#42_ekin_diss_rate']
-        ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}}$'
-        cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color=color[i])
-        cfp.plot(x=time, y=ekdr, label=r'$\varepsilon_{\textrm{kin}}$', color=color[i+1])
-    
-    out_path = path + "TimeEvol/"
-    if not os.path.isdir(out_path):
-        cfp.run_shell_command('mkdir '+out_path)
-    cfp.plot(xlabel=r'$t/t_\mathrm{turb}$', ylabel=ylabel, save=out_path+"tevol_"+f"{variable}_M"+MachNumber[i]+".pdf", legend_loc='best')
+        xlabel = r'$t/t_\mathrm{turb}$'
+        if '0p2' in out_path:
+            ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}}$'
+            ylim = [0,0.008]
+            remove_x_ticks = False
+        elif '5' in out_path:
+            ylabel = None
+            ylim = [0,240]
+            remove_x_ticks = False
+        cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color='b')
+        ret = cfp.plot(x=time, y=ekdr, label=r'$\varepsilon_{\textrm{kin}}$', color='r')
+    ax = ret.ax()
+    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
+        fontsize=14, color='black', verticalalignment='top',
+        bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
+    if remove_x_ticks == True:
+        ax.set_xticklabels([])
+    cfp.plot(xlabel=xlabel, ylabel=ylabel, ylim=ylim, save=out_path+"tevol_"+f"{variable}_M"+MachNumber[i]+".pdf", legend_loc='best')
 
 
 if __name__ == "__main__":
@@ -75,9 +101,12 @@ if __name__ == "__main__":
     for i, path in enumerate(sim_paths):
 
         print(f'Working on: {path}', color='green')
-
+        if '0p2' in MachNumber[i]:
+            Mach = 0.2
+        else:
+            Mach = 5
         for var in args.variable:
-            plot_var(var,path)
+            plot_var(var,path,Mach)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
