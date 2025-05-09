@@ -17,6 +17,8 @@ import dill
 import h5py
 from pathlib import Path
 import gc
+from matplotlib.ticker import SymmetricalLogLocator
+import matplotlib.pyplot as plt
 
 
 # function to compute divv and vort, also checks if they already exist and runs only if they dont
@@ -97,11 +99,11 @@ def compute_2d_pdf(filename, variables, bins, overwrite=False):
     if not os.path.isfile(fname_pkl) or overwrite:
         # read data
         gg = fl.FlashGG(filename)
-        print("reading x data...")
+        print("reading x data...", color="red")
         x = gg.ReadVar(dsets=variables)[0].flatten()
-        print("reading y data...")
+        print("reading y data...", color="red")
         y = gg.ReadVar(dsets=variables)[1].flatten()
-        print("computing binned_statistic_2d...")
+        print("computing binned_statistic_2d...", color="blue")
         counts_, x_edges_, y_edges_, binnum_ = binned_statistic_2d(x, y, np.ones_like(x, dtype=np.float32), statistic='count', bins=bins)
         del x; del y; del binnum_
         gc.collect()
@@ -139,12 +141,24 @@ def plot_2Dpdf(po, MachNumber):
         Mach = '0.2'
     elif '5' ==  MachNumber[i]:
         Mach = '5'
-    ret = cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel, cmap_label="PDF",
+        if po.variables[0] == "divv":
+            xlim = [-1e3,1e3]
+    ret = cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel,
                  log=True, xlog=True, ylog=True)
-    cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=xlabel, ylabel=ylabel, text=r"$\mathcal{M}=$ "+Mach, 
-             color='black', normalised_coords=True, legend_loc='upper right',
+    if po.variables[0] == "divv":
+        ax = ret.ax()[0]
+        ax.set_xscale('symlog', linthresh=1, linscale=0.1)
+        ax.xaxis.set_major_locator(SymmetricalLogLocator(base=10, linthresh=1, subs=[1]))
+        ax.set_xticks([-10, -1, 0, 1, 10])
+        ax.set_xticklabels([r'$-10^{-1}$', '$-1$', '$0$', '$1$', '$10^1$'])
+    ax = ret.ax()[0]
+    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
+        fontsize=14, color='black', verticalalignment='top',
+        bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
+    cfp.plot(ax=ret.ax()[0], x=0.05, y=0.925, xlabel=xlabel, ylabel=ylabel, 
+             color='black', normalised_coords=True, legend_loc='upper right', 
              save=out_path+'averaged_2Dpdf_' + var[0] + "_" + var[1] + "_" + "M" +MachNumber[i] +'.pdf')
-
+    
 if __name__ == "__main__":
 
     # Argument parser setup
@@ -193,9 +207,8 @@ if __name__ == "__main__":
         # 2D PDFs
         if args.pdf2d:
             # variables for the 2d pdf plots, can add more.
-            vars_2Dpdf = [["dens", "ekdr"], ["vorticity", "ekdr"], ["divv", "ekdr"]]
+            vars_2Dpdf = [["dens", "ekdr"]]#, , ["vorticity", "ekdr"],["divv", "ekdr"]
             # loop over simulation variables
-            
             for var in vars_2Dpdf:
                 if '0p2' in out_path:
                     if var[0] == "dens":
@@ -203,7 +216,7 @@ if __name__ == "__main__":
                     if var[0] == "vorticity":
                         bins_x = np.logspace(-1, 2, 500)
                     if var[0] == "divv":
-                        bins_x = cfp.symlogspace(-1, 1, 500)
+                        bins_x = cfp.symlogspace(-5, 1, 500)
                     if var[1] == "ekdr":
                         bins_y = np.logspace(-7, 2, 500)
                 elif '5' in out_path:
