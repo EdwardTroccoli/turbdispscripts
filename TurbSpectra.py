@@ -19,7 +19,7 @@ def compute_spectra(filename, out_path='./'):
     # Check if file exists
     if not (os.path.exists(out_path+filename.split('/')[-1]+extensions[0]) and os.path.exists(out_path+filename.split('/')[-1]+extensions[1])):
         # run the spectra command
-        cfp.run_shell_command(f'mpirun -np 8 spectra {filename} -types 0 1 -dsets ekdr')
+        cfp.run_shell_command(f'mpirun -np 64 spectra {filename} -types 0 1 -dsets ekdr')
         time.sleep(0.1)
         for ext in extensions:
             cfp.run_shell_command("mv "+filename+ext+" "+out_path)
@@ -27,15 +27,34 @@ def compute_spectra(filename, out_path='./'):
 
 # plotting function for spectras
 def plot_spectra(dat, var):
-    if var == "vels": ylabel=r'Power spectrum of $E_\mathrm{kin}$'
-    if var == "ekdr": ylabel=r'Power spectrum of $\varepsilon_\mathrm{kin}$'
+    if var == "vels": 
+        xlabel = None
+        if '0p2' in out_path:
+            Mach='0.2'
+            ylabel=r'Power spectrum of $E_\mathrm{kin}$'
+        elif '5' in out_path:
+            Mach='5'
+            ylabel = None
+    if var == "ekdr": 
+        xlabel = r'Wavenumber $k$'
+        if '0p2' in out_path:
+            Mach='0.2'
+            ylabel=r'Power spectrum of $\varepsilon_\mathrm{kin}$'
+        elif '5' in out_path:
+            Mach='5'
+            ylabel = None
     y = 10**dat['col6']
     sigylo = y - 10**(dat['col6']-dat['col7'])
     sigyup = 10**(dat['col6']+dat['col7']) - y
-    cfp.plot(x=dat['col1'], y=y, yerr=[sigylo,sigyup], shaded_err=True)
-    cfp.plot(xlabel=r'Wavenumber $\mathrm{k}$', ylabel=ylabel, xlog=True, ylog=True,
+    ret = cfp.plot(
+    x=dat['col1'],
+    y=y,
+    yerr=[sigylo, sigyup],
+    shaded_err=True)
+    ax = ret.ax()
+    ax.text(0.95, 0.95,r"$\mathcal{M}=$ " + f"{Mach}", ha='right', va='top',transform=ax.transAxes)
+    cfp.plot(ax=ret.ax(), xlabel=xlabel, ylabel=ylabel, xlog=True, ylog=True,
             save=out_path+'aver_spectra'+ "_" + var + "_" + "M" +MachNumber[i] +'.pdf')
-
 
 if __name__ == "__main__":
 

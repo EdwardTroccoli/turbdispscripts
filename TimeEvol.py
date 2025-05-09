@@ -80,7 +80,7 @@ def plot_var(variable,path,Mach):
     ax = ret.ax()
     ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
         fontsize=14, color='black', verticalalignment='top',
-        bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
+        bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
     if remove_x_ticks == True:
         ax.set_xticklabels([])
     cfp.plot(xlabel=xlabel, ylabel=ylabel, ylim=ylim, save=out_path+"tevol_"+f"{variable}_M"+MachNumber[i]+".pdf", legend_loc='best')
