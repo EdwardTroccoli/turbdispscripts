@@ -188,7 +188,8 @@ def line_fitting(po,xlabel,ylabel,save_output):
         geometric_mean_x=np.sqrt(x_edges[:-1] * x_edges[1:])
         y_edges=po.y_edges[-250:]
         geometric_mean_y=-np.sqrt(y_edges[:-1] * y_edges[1:])
-        po.pdf = po.pdf[:, :249]   
+        po.pdf = po.pdf[:, :249]  
+        cfp.get_2d_coords() 
     elif po.variables[1]=='vorticity':
         geometric_mean_x=geometric_mean_x[150:225]
         geometric_mean_y=geometric_mean_y[150:225]
@@ -199,7 +200,7 @@ def line_fitting(po,xlabel,ylabel,save_output):
         j = np.argmax(col)
         ridge_x.append(geometric_mean_x[k])
         ridge_y.append(geometric_mean_y[j])
-        ridge_weights.append(geometric_mean_y[j])
+        ridge_weights.append(j)
 
     def power_law(x, A, B):
         return A * x**B
