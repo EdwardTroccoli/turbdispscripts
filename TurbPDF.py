@@ -93,16 +93,16 @@ def plot_1d_pdf(pdf_dat):
                  yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlog=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
 
 
-def compute_2d_pdf(filename, variables, bins, overwrite=False):
+def compute_2d_pdf(filename, variables, bins, overwrite=False, norm=None):
     #fname_pkl = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + "_" + "M" +MachNumber[i] + ".pkl"
     fname_pkl = out_path + f"{Path(filename).stem}_2Dpdf_{variables[1]}_{variables[0]}_M{MachNumber[i]}.pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         # read data
         gg = fl.FlashGG(filename)
         print("reading x data...", color="red")
-        x = gg.ReadVar(dsets=variables)[0].flatten()
+        x = gg.ReadVar(dsets=variables)[1].flatten()*norm
         print("reading y data...", color="red")
-        y = gg.ReadVar(dsets=variables)[1].flatten()
+        y = gg.ReadVar(dsets=variables)[0].flatten()*(t_turb[i]/Mach[i]**2)
         print("computing binned_statistic_2d...", color="blue")
         counts_, x_edges_, y_edges_, binnum_ = binned_statistic_2d(x, y, np.ones_like(x, dtype=np.float32), statistic='count', bins=bins)
         del x; del y; del binnum_
@@ -130,18 +130,20 @@ def plot_2Dpdf(po, MachNumber):
     save_output = out_path+'averaged_2Dpdf_' + var[1] + "_" + var[0] + "_" + "M" +MachNumber[i] +'.pdf'
     if not os.path.isdir(out_path):
         cfp.run_shell_command('mkdir '+out_path)
-    if po.variables[0] == "ekdr":
-        xlabel=r'$\varepsilon_{\textrm{kin}}$'
-    if po.variables[1] == "dens":
-        ylabel = r"$\rho/\langle\rho\rangle$"
+    xlabel,ylabel=None,None
+    remove_x_ticks,remove_y_ticks=None,None
+    if po.variables[1] == "ekdr":
+        ylabel=r'$\varepsilon_{\textrm{kin}}$'
+    if po.variables[0] == "dens":
+        xlabel = r"$\rho/\langle\rho\rangle$"
         remove_x_ticks = True
-        xlabel = None
-    if po.variables[1] == "divv":
+        ylabel = None
+    if po.variables[0] == "divv":
         ylabel = r"$\nabla\cdot\mathbf{v}$"
         remove_x_ticks = True
         xlabel = None
-    if po.variables[1] == "vorticity":
-        ylabel = r"$|\nabla\times\mathbf{v}|$"
+    if po.variables[0] == "vorticity":
+        xlabel = r"$|\nabla\times\mathbf{v}|$"
         remove_x_ticks = False
     if '0p2' == MachNumber[i]:
         Mach = '0.2'
@@ -150,13 +152,11 @@ def plot_2Dpdf(po, MachNumber):
         Mach = '5'
         remove_y_ticks = True
         ylabel = None
-        #if po.variables[1] == "divv":
-        #    xlim = [-1e3,1e3]
     ret = cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel,
                  log=True, xlog=True, ylog=True)
-    if po.variables[0] == "divv":
-        ax.set_xticks([-1e4,-1e3,-1e2,-10, 0, 10,1e2,1e3,1e4])
-        ax.set_xticklabels([r,'$-10^{-4}$','$-10^{-3}$','$-10^{-2}$','$-10^{-1}$', '$0$', '$10^1$','$10^2$','$10^3$','$10^4$'])
+    #if po.variables[0] == "divv":
+     #   ax.set_xticks([-1e4,-1e3,-1e2,-10, 0, 10,1e2,1e3,1e4])
+     #   ax.set_xticklabels(['$-10^{-4}$','$-10^{-3}$','$-10^{-2}$','$-10^{-1}$', '$0$', '$10^1$','$10^2$','$10^3$','$10^4$'])
     ax = ret.ax()[0]
     ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
         fontsize=14, color='black', verticalalignment='top',
@@ -173,53 +173,45 @@ def plot_2Dpdf(po, MachNumber):
         line_fitting(po,xlabel,ylabel,save_output)
     cfp.run_shell_command(f'shellutils.py pdf_compress -i {save_output} -overwrite')
     
-def line_fitting(po,xlabel,ylabel,save_output):
-    x_edges=po.x_edges
-    y_edges=po.y_edges
-    geometric_mean_x=np.sqrt(x_edges[:-1] * x_edges[1:])
-    geometric_mean_y=np.sqrt(y_edges[:-1] * y_edges[1:])
-
-    ridge_x = []
-    ridge_y = []
-    ridge_weights =[]
+def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None):
+    geo_x=np.sqrt(po.x_edges[:-1] * po.x_edges[1:])
+    geo_y=np.sqrt(po.y_edges[:-1] * po.y_edges[1:])
 
     if po.variables[1]=='divv':
-        x_edges=po.x_edges[-250:]
-        geometric_mean_x=np.sqrt(x_edges[:-1] * x_edges[1:])
-        y_edges=po.y_edges[-250:]
-        geometric_mean_y=-np.sqrt(y_edges[:-1] * y_edges[1:])
-        po.pdf = po.pdf[:, :249]  
-        cfp.get_2d_coords() 
-    elif po.variables[1]=='vorticity':
-        geometric_mean_x=geometric_mean_x[150:225]
-        geometric_mean_y=geometric_mean_y[150:225]
-        po.pdf = po.pdf[:, 100:225] 
+        x_edges=x_edges[x_edges < 0]
+        geo_x=-np.sqrt(x_edges[:-1] * x_edges[1:])
+        po.pdf=po.pdf[:len(x_edges), :]  
 
-    for k in range(len(geometric_mean_x)):
-        col = po.pdf[k, :]
-        j = np.argmax(col)
-        ridge_x.append(geometric_mean_x[k])
-        ridge_y.append(geometric_mean_y[j])
-        ridge_weights.append(j)
-
+    X, Y = np.meshgrid(geo_x, geo_y, indexing='ij')
+    
     def power_law(x, A, B):
         return A * x**B
+    
+    weights = po.pdf.ravel()
+    weights /= weights[weights>0].min()
+    weights[weights>0] = np.log(weights[weights>0])
+    
 
-    fit_result = cfp.fit(power_law, xdat=geometric_mean_x, ydat=geometric_mean_y,
-    params={'A': [-500, 1e-1, 500], 'B': [-2, 0, 2]},
-    fit_method='ls',
-    plot_fit=False, weights=ridge_weights)
+    fit_result = cfp.fit(
+        func=power_law,
+        xdat=X.ravel(),
+        ydat=Y.ravel(),
+        weights=weights,
+        params={'A': [-5000, 1e-1, 5000], 'B': [-10, 0, 10]},
+        fit_method='ls',
+        plot_fit=False
+    )
 
-    y_fit = power_law(geometric_mean_x, *fit_result.popt)
-
+    y_fit = power_law(geo_x, *fit_result.popt)
+    stop()
     if po.variables[1]=='dens':
-        cfp.plot(x=geometric_mean_x[50:200], y=y_fit[50:200], xlabel=xlabel, ylabel=ylabel, color='black',
+        cfp.plot(x=geo_x, y=y_fit, xlabel=xlabel, ylabel=ylabel, color='black',
             save=save_output)
     elif po.variables[1]=='divv':
-        cfp.plot(x=geometric_mean_x[100:200], y=y_fit[100:200], xlabel=xlabel, ylabel=ylabel, color='black',
+        cfp.plot(x=geo_x[100:200], y=y_fit[100:200], xlabel=xlabel, ylabel=ylabel, color='black',
             save=save_output)    
     elif po.variables[1]=='vorticity':
-        cfp.plot(x=geometric_mean_x, y=y_fit, xlabel=xlabel, ylabel=ylabel, color='black',
+        cfp.plot(x=geo_x, y=y_fit, xlabel=xlabel, ylabel=ylabel, color='black',
             save=save_output)   
         
 
@@ -238,7 +230,12 @@ if __name__ == "__main__":
 
     # loop over simulations
     for i, path in enumerate(sim_paths):
-
+        if '1024' in path:
+            N=1024
+        elif '512' in path:
+            N=512
+        elif '256' in path:
+            N=256
         print(f'Working on: {path}', color='green')
 
         # creates the file output dir
@@ -271,27 +268,33 @@ if __name__ == "__main__":
         # 2D PDFs
         if args.pdf2d:
             # variables for the 2d pdf plots, can add more.
-            vars_2Dpdf = [["ekdr", "vorticity"]]# ,["ekdr", "dens"],["ekdr", "vorticity"]
+            vars_2Dpdf = [["ekdr", "dens"], ["ekdr", "vorticity"], ["ekdr", "divv"]]# ,["ekdr", "dens"],["ekdr", "vorticity"]
             # loop over simulation variables
             for var in vars_2Dpdf:
                 if '0p2' in out_path:
                     if var[1] == "dens":
-                        bins_y = np.logspace(-4, 3, 250)
+                        bins_x = np.logspace(-4, 3, 250)
+                        norm = 1
                     if var[1] == "vorticity":
-                        bins_y = np.logspace(-4, 3, 250)
+                        bins_x = np.logspace(-6, 1, 250)
+                        norm = (1/N)/Mach[i]
                     if var[1] == "divv":
-                        bins_y = cfp.symlogspace(-2, 4, 250)
+                        bins_x = cfp.symlogspace(-4, 0, 250)
+                        norm = (1/N)/Mach[i]
                     if var[0] == "ekdr":
-                        bins_x = np.logspace(-7, 2, 250)
+                        bins_y = np.logspace(-8, 6, 250)
                 elif '5' in out_path:
                     if var[1] == "dens":
-                        bins_y = np.logspace(-4, 3, 250)
+                        bins_x = np.logspace(-4, 3, 250)
+                        norm = 1
                     if var[1] == "vorticity":
-                        bins_y = np.logspace(-2, 4, 250)
+                        bins_x = np.logspace(-6, 1, 250)
+                        norm = (1/N)/Mach[i]
                     if var[1] == "divv":
-                        bins_y = cfp.symlogspace(-2, 4, 250)
+                        bins_x = cfp.symlogspace(-4, 0, 250)
+                        norm = (1/N)/Mach[i]
                     if var[0] == "ekdr":
-                        bins_x = np.logspace(-6, 7, 250)
+                        bins_y = np.logspace(-8, 6, 250)
                 fname_pkl = out_path+"averaged_2Dpdf_" + var[1] + "_" + var[0] + "_" + "M" +MachNumber[i] + ".pkl"
                 if not os.path.isfile(fname_pkl) or args.overwrite:
                     pdf_data = []
@@ -299,7 +302,7 @@ if __name__ == "__main__":
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
                         if "vorticity" in var or "divv" in var:
                             compute_divv_vort(path+filename, overwrite=False)
-                        po = compute_2d_pdf(path+filename, var, bins=[bins_x,bins_y],overwrite = args.overwrite)
+                        po = compute_2d_pdf(path+filename, var, bins=[bins_x,bins_y],overwrite = args.overwrite, norm=norm)
                         pdf_data.append(po.pdf)
                     # setup a class to store edges and the averaged pdf data.
                     class ret:
