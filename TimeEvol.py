@@ -33,14 +33,13 @@ def plot_var(variable,path,Mach):
         var = dat['#14_rms_velocity']
         ret = cfp.plot(x=time, y=var, color=color[i])
     elif variable == "ekin":
-        var = dat['#10_E_kinetic']
+        var = dat['#10_E_kinetic']*(1/Mach**2)
+        ylim = [0,0.65]
         if '0p2' in out_path:
-            ylabel = r'$E_\mathrm{kin}$' 
-            ylim = [0,0.025]
+            ylabel = r"Kinetic energy $E_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2)$" 
             remove_x_ticks = True
         elif '5' in out_path:
             ylabel = None
-            ylim = [0,16]
             remove_x_ticks = True
         ret = cfp.plot(x=time, y=var, color=color[i])
     elif variable == "emag":
@@ -64,26 +63,43 @@ def plot_var(variable,path,Mach):
         ylabel = r'total energy dissipation rate'
         ret = cfp.plot(x=time, y=var, label=Mach, color=color[i])
     elif variable == "ired":
-        injr = dat['#41_injection_rate']
-        ekdr = dat['#42_ekin_diss_rate']
+        injr = dat['#41_injection_rate']*(t_turb[i]/Mach**2)
+        ekdr = dat['#42_ekin_diss_rate']*(t_turb[i]/Mach**2)
         xlabel = r'$t/t_\mathrm{turb}$'
+        ylim=[0,1.5]
         if '0p2' in out_path:
-            ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}}$'
-            ylim = [0,0.008]
+            ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}} / (\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\, t_{\textrm{turb}}^{-1})$'
             remove_x_ticks = False
+            dat1= cfp.read_ascii("../N512M0p2HDRe2500/Turb.dat")
+            dat2= cfp.read_ascii("../N256M0p2HDRe2500/Turb.dat")
         elif '5' in out_path:
+            dat1= cfp.read_ascii("../N512M5HDRe2500/Turb.dat")
+            dat2= cfp.read_ascii("../N256M5HDRe2500/Turb.dat")
             ylabel = None
-            ylim = [0,240]
             remove_x_ticks = False
-        cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color='b')
-        ret = cfp.plot(x=time, y=ekdr, label=r'$\varepsilon_{\textrm{kin}}$', color='r')
+        time1   = dat1['01_time']/t_turb[i]
+        time2   = dat2['01_time']/t_turb[i]
+        ekdr1   = dat1['#42_ekin_diss_rate'] * (t_turb[i]/Mach**2)
+        ekdr2   = dat2['#42_ekin_diss_rate'] * (t_turb[i]/Mach**2)
+        if args.interpolate == True:
+            stop()
+        cfp.plot(x=time2, y=ekdr2, label=r'$256^3$', color='pink')
+        cfp.plot(x=time, y=ekdr, label=r'$1024^3$', color='black')
+        cfp.plot(x=time1, y=ekdr1, label=r'$512^3$', color='green')
+        #Reorder by desired index
+        order = [1, 3, 2, 0]  # example: ε_inj, 1024³, 512³, 256³
+        ret = cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color='b')
+        time1   = dat1['01_time']/t_turb[i]
     ax = ret.ax()
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend([handles[i] for i in order], [labels[i] for i in order],bbox_to_anchor=(0.005, 0.93))
     ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
         fontsize=14, color='black', verticalalignment='top',
         bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
     if remove_x_ticks == True:
         ax.set_xticklabels([])
-    cfp.plot(xlabel=xlabel, ylabel=ylabel, ylim=ylim, save=out_path+"tevol_"+f"{variable}_M"+MachNumber[i]+".pdf", legend_loc='best')
+
+    cfp.plot(xlabel=xlabel, ylabel=ylabel, ylim=ylim, save=out_path+"tevol_"+f"{variable}_M"+MachNumber[i]+".pdf", legend_loc='upper left')
 
 
 if __name__ == "__main__":
@@ -92,6 +108,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot different variables from simulation data.")
     var_choices = ["vstd", "ekin", "emag", "injr", "ekdr", "emdr", "etdr", "ired"]
     parser.add_argument("-v", "--variable", nargs='*', choices=var_choices, required=True, help="Variable to plot; choice of "+str(var_choices))
+    parser.add_argument("-int", "--interpolate", action='store_true', default=False, help="Allows interpolation of dissipation and injection rates")
     # Parse the command-line arguments
     args = parser.parse_args()
 
