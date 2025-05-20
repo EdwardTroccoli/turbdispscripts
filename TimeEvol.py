@@ -70,11 +70,11 @@ def plot_var(variable,path,Mach):
         if '0p2' in out_path:
             ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}} / (\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\, t_{\textrm{turb}}^{-1})$'
             remove_x_ticks = False
-            dat1= cfp.read_ascii("../N512M0p2HDRe2500/Turb.dat")
-            dat2= cfp.read_ascii("../N256M0p2HDRe2500/Turb.dat")
+            dat1 = cfp.read_ascii("../N512M0p2HDRe2500/Turb.dat")
+            dat2 = cfp.read_ascii("../N256M0p2HDRe2500/Turb.dat")
         elif '5' in out_path:
-            dat1= cfp.read_ascii("../N512M5HDRe2500/Turb.dat")
-            dat2= cfp.read_ascii("../N256M5HDRe2500/Turb.dat")
+            dat1 = cfp.read_ascii("../N512M5HDRe2500/Turb.dat")
+            dat2 = cfp.read_ascii("../N256M5HDRe2500/Turb.dat")
             ylabel = None
             remove_x_ticks = False
         time1   = dat1['01_time']/t_turb[i]
@@ -82,7 +82,23 @@ def plot_var(variable,path,Mach):
         ekdr1   = dat1['#42_ekin_diss_rate'] * (t_turb[i]/Mach**2)
         ekdr2   = dat2['#42_ekin_diss_rate'] * (t_turb[i]/Mach**2)
         if args.interpolate == True:
-            stop()
+            npts = 1001
+            npts_per_tturb = int(npts / 10)
+            time_int = np.linspace(0, 10, npts) # interpolated time axis
+            ekdr_int = np.interp(time_int, time, ekdr)
+            injr_int = np.interp(time_int, time, injr)
+            tshifts = []
+            L2s = []
+            for ishift in range(1, 3*npts_per_tturb):
+                tshifts.append(ishift/npts_per_tturb)
+                L2s.append((np.std(injr_int[:-ishift]-ekdr_int[ishift:])/np.mean(injr_int[:-ishift]))**2)
+            tshifts = np.array(tshifts); L2s=np.array(L2s)
+            cfp.plot(x=tshifts, y=L2s, ylim=[0,0.3], xlabel=r'$\Delta t / t_{\textrm{turb}}$',
+                     ylabel=r'L2 norm of $\varepsilon_{\textrm{kin}}-\varepsilon_{\textrm{inj}}$',
+                     save=out_path+"tevol_"+f"{variable}_M"+MachNumber[i]+"_time_correlation.pdf")
+            # get optimal time shift for max correlation
+            tshift_max_correlation = tshifts[L2s==L2s.min()]
+            print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation)
         cfp.plot(x=time2, y=ekdr2, label=r'$256^3$', color='pink')
         cfp.plot(x=time, y=ekdr, label=r'$1024^3$', color='black')
         cfp.plot(x=time1, y=ekdr1, label=r'$512^3$', color='green')
