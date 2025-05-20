@@ -52,7 +52,9 @@ def plot_spectra(dat, var):
     yerr=[sigylo, sigyup],
     shaded_err=True)
     ax = ret.ax()
-    ax.text(0.95, 0.95,r"$\mathcal{M}=$ " + f"{Mach}", ha='right', va='top',transform=ax.transAxes)
+    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
+        fontsize=14, color='black', verticalalignment='top',
+        bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
     cfp.plot(ax=ret.ax(), xlabel=xlabel, ylabel=ylabel, xlog=True, ylog=True,
             save=out_path+'aver_spectra'+ "_" + var + "_" + "M" +MachNumber[i] +'.pdf')
 

@@ -130,47 +130,48 @@ def plot_2Dpdf(po, MachNumber):
     save_output = out_path+'averaged_2Dpdf_' + var[1] + "_" + var[0] + "_" + "M" +MachNumber[i] +'.pdf'
     if not os.path.isdir(out_path):
         cfp.run_shell_command('mkdir '+out_path)
-    xlabel,ylabel=None,None
     remove_x_ticks,remove_y_ticks=None,None
-    if po.variables[1] == "ekdr":
-        ylabel=r'$\varepsilon_{\textrm{kin}}$'
-    if po.variables[0] == "dens":
-        xlabel = r"$\rho/\langle\rho\rangle$"
+    if po.variables[0] == "ekdr":
+        ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
+    if po.variables[1] == "dens":
+        xlabel = r"$\rho/(\langle\rho\rangle)$"
         remove_x_ticks = True
-        ylabel = None
-    if po.variables[0] == "divv":
-        ylabel = r"$\nabla\cdot\mathbf{v}$"
+    if po.variables[1] == "divv":
+        xlabel = r"$\nabla\cdot\mathbf{v}/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
         remove_x_ticks = True
-        xlabel = None
-    if po.variables[0] == "vorticity":
-        xlabel = r"$|\nabla\times\mathbf{v}|$"
+    if po.variables[1] == "vorticity":
+        xlabel = r"$|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
         remove_x_ticks = False
     if '0p2' == MachNumber[i]:
         Mach = '0.2'
         remove_y_ticks = False
+        remove_x_ticks = False
+        cmap_label = None
     elif '5' ==  MachNumber[i]:
         Mach = '5'
         remove_y_ticks = True
+        remove_x_ticks = False
         ylabel = None
+        cmap_label = 'PDF'
     ret = cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel,
-                 log=True, xlog=True, ylog=True)
-    #if po.variables[0] == "divv":
-     #   ax.set_xticks([-1e4,-1e3,-1e2,-10, 0, 10,1e2,1e3,1e4])
-     #   ax.set_xticklabels(['$-10^{-4}$','$-10^{-3}$','$-10^{-2}$','$-10^{-1}$', '$0$', '$10^1$','$10^2$','$10^3$','$10^4$'])
+                 log=True, xlog=True, ylog=True, cmap_label=cmap_label)
     ax = ret.ax()[0]
     ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
         fontsize=14, color='black', verticalalignment='top',
         bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
+    if po.variables[1] == "divv":
+        ax.set_xticks([-1e0,-1e-1,-1e-2,-1e-3, 0, 1e-3,1e-2,1e-1,1e0])
+        ax.set_xticklabels(['$-10^0$','$-10^{-1}$','$-10^{-2}$','$-10^{-3}$','$0$', '$10^{-3}$','$10^{-2}$','$10^{-1}$','$10^0$'])
     cfp.plot(ax=ret.ax()[0], normalised_coords=True)
     if remove_x_ticks == True:
         ax.set_xticklabels([])
     if remove_y_ticks == True:
         ax.set_yticklabels([])
-    if ('0p2' in path) and ( (po.variables[1] == 'dens') or (po.variables[1] == 'divv')):
-        cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, normalised_coords=True, 
+    #if ('0p2' in path) and ( (po.variables[1] == 'dens') or (po.variables[1] == 'divv')):
+    cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, normalised_coords=True, 
              save=save_output)
-    else:
-        line_fitting(po,xlabel,ylabel,save_output)
+    #else:
+     #   line_fitting(po,xlabel,ylabel,save_output)
     cfp.run_shell_command(f'shellutils.py pdf_compress -i {save_output} -overwrite')
     
 def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None):
@@ -268,7 +269,7 @@ if __name__ == "__main__":
         # 2D PDFs
         if args.pdf2d:
             # variables for the 2d pdf plots, can add more.
-            vars_2Dpdf = [["ekdr", "dens"], ["ekdr", "vorticity"], ["ekdr", "divv"]]# ,["ekdr", "dens"],["ekdr", "vorticity"]
+            vars_2Dpdf = [["ekdr", "dens"], ["ekdr", "vorticity"], ["ekdr", "divv"]]# ["ekdr", "dens"], ["ekdr", "vorticity"],
             # loop over simulation variables
             for var in vars_2Dpdf:
                 if '0p2' in out_path:
