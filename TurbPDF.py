@@ -17,7 +17,6 @@ import dill
 import h5py
 from pathlib import Path
 import gc
-from matplotlib.ticker import SymmetricalLogLocator
 import matplotlib.pyplot as plt
 
 

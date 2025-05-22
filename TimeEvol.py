@@ -93,17 +93,22 @@ def plot_var(variable,path,Mach):
                 tshifts.append(ishift/npts_per_tturb)
                 L2s.append((np.std(injr_int[:-ishift]-ekdr_int[ishift:])/np.mean(injr_int[:-ishift]))**2)
             tshifts = np.array(tshifts); L2s=np.array(L2s)
-            cfp.plot(x=tshifts, y=L2s, ylim=[0,0.3], xlabel=r'$\Delta t / t_{\textrm{turb}}$',
-                     ylabel=r'L2 norm of $\varepsilon_{\textrm{kin}}-\varepsilon_{\textrm{inj}}$',
+            ret = cfp.plot(x=tshifts, y=L2s)
+            ax = ret.ax()
+            ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
+                fontsize=14, color='black', verticalalignment='top',
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
+            cfp.plot(ylim=[0,0.35], xlabel=r'$t / t_{\textrm{turb}}$',
+                     ylabel=r'$\ell^2$ norm of $\varepsilon_{\textrm{kin}}-\varepsilon_{\textrm{inj}}$',
                      save=out_path+"tevol_"+f"{variable}_M"+MachNumber[i]+"_time_correlation.pdf")
             # get optimal time shift for max correlation
             tshift_max_correlation = tshifts[L2s==L2s.min()]
-            print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation)
+            print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation,color = 'green')
         cfp.plot(x=time2, y=ekdr2, label=r'$256^3$', color='pink')
         cfp.plot(x=time, y=ekdr, label=r'$1024^3$', color='black')
         cfp.plot(x=time1, y=ekdr1, label=r'$512^3$', color='green')
         #Reorder by desired index
-        order = [1, 3, 2, 0]  # example: ε_inj, 1024³, 512³, 256³
+        order = [0, 2, 1, 3] 
         ret = cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color='b')
         time1   = dat1['01_time']/t_turb[i]
     ax = ret.ax()
