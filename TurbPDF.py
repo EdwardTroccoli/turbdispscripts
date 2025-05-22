@@ -173,7 +173,8 @@ def plot_2Dpdf(po, MachNumber):
     #else:
      #   line_fitting(po,xlabel,ylabel,save_output)
     cfp.run_shell_command(f'shellutils.py pdf_compress -i {save_output} -overwrite')
-    
+
+
 def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None):
     geo_x=np.sqrt(po.x_edges[:-1] * po.x_edges[1:])
     geo_y=np.sqrt(po.y_edges[:-1] * po.y_edges[1:])
@@ -184,14 +185,13 @@ def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None):
         po.pdf=po.pdf[:len(x_edges), :]  
 
     X, Y = np.meshgrid(geo_x, geo_y, indexing='ij')
-    
+
     def power_law(x, A, B):
         return A * x**B
-    
+
     weights = po.pdf.ravel()
     weights /= weights[weights>0].min()
     weights[weights>0] = np.log(weights[weights>0])
-    
 
     fit_result = cfp.fit(
         func=power_law,
@@ -210,11 +210,11 @@ def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None):
             save=save_output)
     elif po.variables[1]=='divv':
         cfp.plot(x=geo_x[100:200], y=y_fit[100:200], xlabel=xlabel, ylabel=ylabel, color='black',
-            save=save_output)    
+            save=save_output)
     elif po.variables[1]=='vorticity':
         cfp.plot(x=geo_x, y=y_fit, xlabel=xlabel, ylabel=ylabel, color='black',
-            save=save_output)   
-        
+            save=save_output)
+
 
 if __name__ == "__main__":
 
