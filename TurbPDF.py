@@ -167,44 +167,42 @@ def plot_2Dpdf(po, MachNumber):
         ax.set_xticklabels([])
     if remove_y_ticks == True:
         ax.set_yticklabels([])
-    #if ('0p2' in path) and ( (po.variables[1] == 'dens') or (po.variables[1] == 'divv')):
-    cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, normalised_coords=True, 
-             save=save_output)
-    #else:
-     #   line_fitting(po,xlabel,ylabel,save_output)
+    if ('0p2' in path) and ( (po.variables[1] == 'dens') or (po.variables[1] == 'divv')):
+        cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, normalised_coords=True, save=save_output)
+    else:
+        line_fitting(po, xlabel, ylabel, save_output)
     cfp.run_shell_command(f'shellutils.py pdf_compress -i {save_output} -overwrite')
 
 
 def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None):
-    geo_x=np.sqrt(po.x_edges[:-1] * po.x_edges[1:])
-    geo_y=np.sqrt(po.y_edges[:-1] * po.y_edges[1:])
+    geo_x = np.sqrt(po.x_edges[:-1] * po.x_edges[1:])
+    geo_y = np.sqrt(po.y_edges[:-1] * po.y_edges[1:])
+    pdf = np.copy(po.pdf)
+
 
     if po.variables[1]=='divv':
-        x_edges=x_edges[x_edges < 0]
-        geo_x=-np.sqrt(x_edges[:-1] * x_edges[1:])
-        po.pdf=po.pdf[:len(x_edges), :]  
+        x_edges = x_edges[x_edges < 0]
+        geo_x = -np.sqrt(x_edges[:-1] * x_edges[1:])
+        pdf = pdf[:len(x_edges), :]
 
     X, Y = np.meshgrid(geo_x, geo_y, indexing='ij')
 
     def power_law(x, A, B):
         return A * x**B
 
-    weights = po.pdf.ravel()
-    weights /= weights[weights>0].min()
-    weights[weights>0] = np.log(weights[weights>0])
+    weights = np.copy(pdf).ravel()
+    ind = weights > 0
+    weights /= weights[ind].min()
+    weights[ind] = np.log10(weights[ind]) + 1e-99
 
-    fit_result = cfp.fit(
-        func=power_law,
-        xdat=X.ravel(),
-        ydat=Y.ravel(),
-        weights=weights,
-        params={'A': [-5000, 1e-1, 5000], 'B': [-10, 0, 10]},
-        fit_method='ls',
-        plot_fit=False
-    )
+    xdat = X.ravel()
+    ydat = Y.ravel()
+
+    fit_result = cfp.fit(func=power_law, xdat=xdat[ind], ydat=ydat[ind], weights=weights[ind],
+                         params={'A': [1e-6, 1, 1e6], 'B': [-3, 0, 3]})
 
     y_fit = power_law(geo_x, *fit_result.popt)
-    stop()
+
     if po.variables[1]=='dens':
         cfp.plot(x=geo_x, y=y_fit, xlabel=xlabel, ylabel=ylabel, color='black',
             save=save_output)
@@ -215,6 +213,7 @@ def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None):
         cfp.plot(x=geo_x, y=y_fit, xlabel=xlabel, ylabel=ylabel, color='black',
             save=save_output)
 
+    stop()
 
 if __name__ == "__main__":
 
