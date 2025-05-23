@@ -124,7 +124,7 @@ def compute_2d_pdf(filename, variables, bins, overwrite=False, norm=None):
         ret = dill.load(open(fname_pkl, "rb"))
     return ret
 
-def plot_2Dpdf(po, MachNumber, do_fit=False, by_hand_fit=False, fit_xlim=None, fit_ylim=None):
+def plot_2Dpdf(po, MachNumber, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
     out_path = path + "PDFs/"
     save_output = out_path+'averaged_2Dpdf_' + var[1] + "_" + var[0] + "_" + "M" +MachNumber[i] +'.pdf'
     if not os.path.isdir(out_path):
@@ -155,9 +155,8 @@ def plot_2Dpdf(po, MachNumber, do_fit=False, by_hand_fit=False, fit_xlim=None, f
     ret = cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel,
                  log=True, xlog=True, ylog=True, cmap_label=cmap_label)
     ax = ret.ax()[0]
-    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
-        fontsize=14, color='black', verticalalignment='top',
-        bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
+    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes, fontsize=14, color='black', verticalalignment='top')#,
+        #bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
     if po.variables[1] == "divv":
         ax.set_xticks([-1e0,-1e-1,-1e-2,-1e-3, 0, 1e-3,1e-2,1e-1,1e0])
         ax.set_xticklabels(['$-10^0$','$-10^{-1}$','$-10^{-2}$','$-10^{-3}$','$0$', '$10^{-3}$','$10^{-2}$','$10^{-1}$','$10^0$'])
@@ -173,64 +172,65 @@ def plot_2Dpdf(po, MachNumber, do_fit=False, by_hand_fit=False, fit_xlim=None, f
     cfp.run_shell_command(f'shellutils.py pdf_compress -i {save_output} -overwrite')
 
 
-def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_fit=False):
-    geo_x = np.sqrt(po.x_edges[:-1] * po.x_edges[1:])
-    geo_y = np.sqrt(po.y_edges[:-1] * po.y_edges[1:])
-    pdf = np.copy(po.pdf)
-
-    if po.variables[1]=='divv':
-        x_edges = x_edges[x_edges < 0]
-        geo_x = -np.sqrt(x_edges[:-1] * x_edges[1:])
-        pdf = pdf[:len(x_edges), :]
-
-    X, Y = np.meshgrid(geo_x, geo_y, indexing='ij')
-
-
-    def linear_func(x, m, t):
-        return m * x + t
-
+def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_fit=None):
+    # compute bin centres (take care of symlog as well)
+    # --- x ---
+    ineg = po.x_edges <= 0
+    ipos = po.x_edges >= 0
+    x_mid = np.concatenate([-np.sqrt(po.x_edges[ineg][:-1] * po.x_edges[ineg][1:]), np.sqrt(po.x_edges[ipos][:-1] * po.x_edges[ipos][1:])])
+    indz = np.where(po.x_edges == 0)[0]
+    if len(indz) > 0:
+        indz = indz[0]
+        x_mid[indz-1] = 0.5*(po.x_edges[indz-1]+po.x_edges[indz+0])
+        x_mid[indz+0] = 0.5*(po.x_edges[indz+0]+po.x_edges[indz+1])
+    # --- y ---
+    ineg = po.y_edges <= 0
+    ipos = po.y_edges >= 0
+    y_mid = np.concatenate([-np.sqrt(po.y_edges[ineg][:-1] * po.y_edges[ineg][1:]), np.sqrt(po.y_edges[ipos][:-1] * po.y_edges[ipos][1:])])
+    indz = np.where(po.y_edges == 0)[0]
+    if len(indz) > 0:
+        indz = indz[0]
+        y_mid[indz-1] = 0.5*(po.y_edges[indz-1]+po.y_edges[indz+0])
+        y_mid[indz+0] = 0.5*(po.y_edges[indz+0]+po.y_edges[indz+1])
+    # extend to 2D arrays
+    X, Y = np.meshgrid(x_mid, y_mid, indexing='ij')
     # define weights based on PDF
-    weights = np.copy(pdf).ravel()
+    pdf = np.copy(po.pdf)
+    weights = pdf.ravel()
     ind = weights > 0
     weights /= weights[ind].min()
     weights[ind] = np.log10(weights[ind])
     ind = weights > 0
-    weights = weights[ind]
-
-    # selecting only relevant data based on the PDF
+    weights = 10**weights[ind]
+    # select only relevant data based on the PDF
     xdat = X.ravel()[ind]
     ydat = Y.ravel()[ind]
-
-    # selecting fit range
+    # select fit range
     if xlim is None: xlim = [xdat.min(), xdat.max()]
     if ylim is None: ylim = [ydat.min(), ydat.max()]
     indlim = ((xlim[0] <= xdat) & (xdat <= xlim[1])) & ((ylim[0] <= ydat) & (ydat <= ylim[1]))
-
-    if not by_hand_fit:
-        fit_result = cfp.fit(linear_func, np.log10(xdat[indlim]), np.log10(ydat[indlim]),
-                            weights=weights[indlim], params={'m': [0, 1, 5], 't': [-10, 1, 10]})
-        y_fit = 10**linear_func(np.log10(xlim), *fit_result.popt)
-
-    # plot the mode
-    # indmax = np.array(np.where(pdf==pdf.max())).flatten()
-    # cfp.plot(x=X[indmax[0],indmax[1]], y=Y[indmax[0],indmax[1]], type='scatter', color='magenta')
-
-    if by_hand_fit:
-        if po.variables[1]=='vorticity':
-            cfp.plot(x=xlim, y=10**linear_func(np.log10(xlim), 2.0, 2.5), xlabel=xlabel, ylabel=ylabel,
-                     color='black', linewidth=0.5, linestyle=(0, (1, 5)), save=save_output)
+    # linear function for power-law fit in log-log space
+    def linear_func(x, m, t):
+        return m * x + t
+    # perform fit
+    if by_hand_fit is None:
+        xfit = xdat[indlim]
+        ineg = xfit <= 0
+        ipos = xfit  > 0
+        xfit[ipos] = +np.log10(+xfit[ipos])
+        xfit[ineg] = -np.log10(-xfit[ineg])
+        yfit = ydat[indlim]
+        ineg = yfit <= 0
+        ipos = yfit  > 0
+        yfit[ipos] = +np.log10(+yfit[ipos])
+        yfit[ineg] = -np.log10(-yfit[ineg])
+        fit_result = cfp.fit(linear_func, xfit, yfit, weights=weights[indlim], params={'m': [0, 1, 5], 't': [-10, 1, 10]})
+        yfit = 10**linear_func(np.log10(xlim), *fit_result.popt)
     else:
-        cfp.plot(x=xlim, y=y_fit, xlabel=xlabel, ylabel=ylabel,
-                 color='black', linewidth=0.5, linestyle='dashed', save=save_output)
+        yfit = 10**linear_func(np.log10(xlim), by_hand_fit[0], by_hand_fit[1]) # by-hand fit
+    # plot fit
+    cfp.plot(x=xlim, y=yfit, xlabel=xlabel, ylabel=ylabel, color='black', linewidth=0.5, linestyle=(0, (1, 5)), save=save_output)
 
-    if po.variables[1]=='dens':
-        cfp.plot(x=geo_x, y=y_fit, xlabel=xlabel, ylabel=ylabel, color='black',
-            save=save_output)
-    elif po.variables[1]=='divv':
-        cfp.plot(x=geo_x[100:200], y=y_fit[100:200], xlabel=xlabel, ylabel=ylabel, color='black',
-            save=save_output)
-
-    stop()
 
 if __name__ == "__main__":
 
@@ -247,13 +247,12 @@ if __name__ == "__main__":
 
     # loop over simulations
     for i, path in enumerate(sim_paths):
-        if '1024' in path:
-            N=1024
-        elif '512' in path:
-            N=512
-        elif '256' in path:
-            N=256
-        print(f'Working on: {path}', color='green')
+
+        if '1024' in path: N = 1024
+        if  '512' in path: N =  512
+        if  '256' in path: N =  256
+
+        print(f'\nWorking on: {path}', color='cyan')
 
         # creates the file output dir
         out_path = path + "PDFs/"
@@ -285,13 +284,13 @@ if __name__ == "__main__":
         # 2D PDFs
         if args.pdf2d:
             # variables for the 2d pdf plots, can add more.
-            vars_2Dpdf = [["ekdr", "dens"], ["ekdr", "vorticity"], ["ekdr", "divv"]]# ["ekdr", "dens"], ["ekdr", "vorticity"],
+            vars_2Dpdf = [["ekdr", "dens"], ["ekdr", "vorticity"], ["ekdr", "divv"]]
             # loop over simulation variables
             for var in vars_2Dpdf:
                 # set defaults
                 norm = 1
                 do_fit = False
-                by_hand_fit = False
+                by_hand_fit = None
                 fit_xlim = None
                 fit_ylim = None
                 # set normalisation
@@ -302,11 +301,13 @@ if __name__ == "__main__":
                     bins_y = np.logspace(-8, 6, 250)
                 if var[1] == "dens":
                     bins_x = np.logspace(-4, 3, 250)
+                    if 'M5' in path:
+                        by_hand_fit = [1.5, -1.0] # exponent and normalisation of power-law line to draw
+                        fit_xlim = [1e-2, 1e1]
                 if var[1] == "vorticity":
                     bins_x = np.logspace(-6, 1, 250)
-                    do_fit = True
-                    by_hand_fit = True
-                    fit_xlim = [1e-2, 1]
+                    by_hand_fit = [2.0, 2.5] # exponent and normalisation of power-law line to draw
+                    fit_xlim = [1e-2, 3e-1]
                 if var[1] == "divv":
                     bins_x = cfp.symlogspace(-4, 0, 250)
                 fname_pkl = out_path+"averaged_2Dpdf_" + var[1] + "_" + var[0] + "_" + "M" +MachNumber[i] + ".pkl"
