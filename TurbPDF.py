@@ -133,13 +133,13 @@ def plot_2Dpdf(po, MachNumber, do_fit=False, by_hand_fit=None, fit_xlim=None, fi
     if po.variables[0] == "ekdr":
         ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
     if po.variables[1] == "dens":
-        xlabel = r"$\rho/(\langle\rho\rangle)$"
+        xlabel = r"Density $\rho/(\langle\rho\rangle)$"
         remove_x_ticks = True
     if po.variables[1] == "divv":
-        xlabel = r"$\nabla\cdot\mathbf{v}/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
+        xlabel = r"Divergence $\nabla\cdot\mathbf{v}/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
         remove_x_ticks = True
     if po.variables[1] == "vorticity":
-        xlabel = r"$|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
+        xlabel = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
         remove_x_ticks = False
     if '0p2' == MachNumber[i]:
         Mach = '0.2'
@@ -165,7 +165,7 @@ def plot_2Dpdf(po, MachNumber, do_fit=False, by_hand_fit=None, fit_xlim=None, fi
         ax.set_xticklabels([])
     if remove_y_ticks == True:
         ax.set_yticklabels([])
-    if do_fit:
+    if do_fit or by_hand_fit is not None:
         line_fitting(po, xlabel, ylabel, save_output, xlim=fit_xlim, ylim=fit_ylim, by_hand_fit=by_hand_fit)
     else:
         cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, normalised_coords=True, save=save_output)
@@ -227,6 +227,7 @@ def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_
         fit_result = cfp.fit(linear_func, xfit, yfit, weights=weights[indlim], params={'m': [0, 1, 5], 't': [-10, 1, 10]})
         yfit = 10**linear_func(np.log10(xlim), *fit_result.popt)
     else:
+        print("Drawing by-hand/eye fit with m, t = ", by_hand_fit, color='yellow')
         yfit = 10**linear_func(np.log10(xlim), by_hand_fit[0], by_hand_fit[1]) # by-hand fit
     # plot fit
     cfp.plot(x=xlim, y=yfit, xlabel=xlabel, ylabel=ylabel, color='black', linewidth=0.5, linestyle=(0, (1, 5)), save=save_output)
