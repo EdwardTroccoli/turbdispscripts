@@ -11,14 +11,14 @@ from cfpack.defaults import *
 from Globals import *
 
 
-def plot_var(variable,path,Mach):
+def plot_var(variable, path, Mach):
 
     if not os.path.isdir(fig_path):
         cfp.run_shell_command('mkdir '+fig_path)
     out_path = path + "TimeEvol/"
     if not os.path.isdir(out_path):
         cfp.run_shell_command('mkdir '+out_path)
-    dat = cfp.read_ascii(path+"Turb.dat")
+    dat = cfp.read_ascii(path+"Turb.dat_cleaned")
     time = dat['01_time'] / t_turb[i]
     xlabel = None
     if variable == "vstd":
@@ -62,26 +62,26 @@ def plot_var(variable,path,Mach):
         var = dat['#42_ekin_diss_rate'] + dat['#43_emag_diss_rate']
         ylabel = r'total energy dissipation rate'
         ret = cfp.plot(x=time, y=var, label=Mach, color=color[i])
-    elif variable == "ired":
+    elif variable == "injr_ekdr":
         injr = dat['#41_injection_rate']*(t_turb[i]/Mach**2)
         ekdr = dat['#42_ekin_diss_rate']*(t_turb[i]/Mach**2)
         xlabel = r'$t/t_\mathrm{turb}$'
         ylim=[0,1.5]
-        if '0p2' in out_path:
+        if Mach == 0.2:
             ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}} / (\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\, t_{\textrm{turb}}^{-1})$'
             remove_x_ticks = False
-            dat1 = cfp.read_ascii("../N512M0p2HDRe2500/Turb.dat")
-            dat2 = cfp.read_ascii("../N256M0p2HDRe2500/Turb.dat")
-        elif '5' in out_path:
-            dat1 = cfp.read_ascii("../N512M5HDRe2500/Turb.dat")
-            dat2 = cfp.read_ascii("../N256M5HDRe2500/Turb.dat")
+            dat1 = cfp.read_ascii("../N512M0p2HDRe2500/Turb.dat_cleaned")
+            dat2 = cfp.read_ascii("../N256M0p2HDRe2500/Turb.dat_cleaned")
+        if Mach == 5:
+            dat1 = cfp.read_ascii("../N512M5HDRe2500/Turb.dat_cleaned")
+            dat2 = cfp.read_ascii("../N256M5HDRe2500/Turb.dat_cleaned")
             ylabel = None
             remove_x_ticks = False
         time1   = dat1['01_time']/t_turb[i]
         time2   = dat2['01_time']/t_turb[i]
         ekdr1   = dat1['#42_ekin_diss_rate'] * (t_turb[i]/Mach**2)
         ekdr2   = dat2['#42_ekin_diss_rate'] * (t_turb[i]/Mach**2)
-        if args.interpolate == True:
+        if args.interpolate:
             npts = 1001
             npts_per_tturb = int(npts / 10)
             time_int = np.linspace(0, 10, npts) # interpolated time axis
@@ -107,19 +107,21 @@ def plot_var(variable,path,Mach):
         cfp.plot(x=time2, y=ekdr2, label=r'$256^3$', color='pink')
         cfp.plot(x=time, y=ekdr, label=r'$1024^3$', color='black')
         cfp.plot(x=time1, y=ekdr1, label=r'$512^3$', color='green')
-        #Reorder by desired index
+        # reorder by desired index
         order = [0, 2, 1, 3] 
         ret = cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color='b')
         time1   = dat1['01_time']/t_turb[i]
+        ax = ret.ax()
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend([handles[i] for i in order], [labels[i] for i in order], bbox_to_anchor=(0.005, 0.93))
+    # add Mach label
     ax = ret.ax()
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend([handles[i] for i in order], [labels[i] for i in order],bbox_to_anchor=(0.005, 0.93))
     ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
         fontsize=14, color='black', verticalalignment='top',
         bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
-    if remove_x_ticks == True:
+    if remove_x_ticks:
         ax.set_xticklabels([])
-
+    # create final plot
     cfp.plot(xlabel=xlabel, ylabel=ylabel, ylim=ylim, save=out_path+"tevol_"+f"{variable}_M"+MachNumber[i]+".pdf", legend_loc='upper left')
 
 
@@ -127,10 +129,10 @@ if __name__ == "__main__":
 
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Plot different variables from simulation data.")
-    var_choices = ["vstd", "ekin", "emag", "injr", "ekdr", "emdr", "etdr", "ired"]
+    var_choices = ["vstd", "ekin", "emag", "injr", "ekdr", "emdr", "etdr", "injr_ekdr"]
     parser.add_argument("-v", "--variable", nargs='*', choices=var_choices, required=True, help="Variable to plot; choice of "+str(var_choices))
     parser.add_argument("-int", "--interpolate", action='store_true', default=False, help="Allows interpolation of dissipation and injection rates")
-    # Parse the command-line arguments
+    parser.add_argument("-ov", "--overwrite", action='store_true', default=False, help="Overwrite files")
     args = parser.parse_args()
 
     # Start timing the process
@@ -143,8 +145,14 @@ if __name__ == "__main__":
             Mach = 0.2
         else:
             Mach = 5
+
+        # clean the .dat file
+        datfile = path+'Turb.dat'
+        if not os.path.isfile(datfile+'_cleaned') or args.overwrite:
+            cfp.run_shell_command('flashlib.py datfile -clean '+datfile)
+
         for var in args.variable:
-            plot_var(var,path,Mach)
+            plot_var(var, path, Mach)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
