@@ -14,7 +14,7 @@ args = parser.parse_args()
 
 if args.overwrite==True:
     cfp.print('Working on TimeEvol', color='yellow')
-    cfp.run_shell_command('TimeEvol.py -v vstd ekin ekdr injr_ekdr -int')
+    cfp.run_shell_command('TimeEvol.py -v mach ekin ekdr')
     cfp.print('Working on TurbMov', color='yellow')
     cfp.run_shell_command('TurbMov.py -v dens ekin ekdr')
     cfp.print('Working on TurbPDF', color='yellow')
