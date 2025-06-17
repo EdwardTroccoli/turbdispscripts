@@ -177,14 +177,8 @@ if __name__ == "__main__":
         
         t_turb = params(path).t_turb
         Mach = params(path).Mach
-        if '1024' in path: N = 1024
-        if  '512' in path: N =  512
-        if  '256' in path: N =  256
-
-        if '0p2' in path:
-            MachNum ='0p2'
-        elif '5' in path:
-            MachNum = '5'
+        N = params(path).N
+        MachNum = params(path).MachNum
 
         out_path = path + "movie_files/"
         if not os.path.isdir(out_path):

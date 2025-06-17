@@ -16,8 +16,11 @@ sim_paths = ["../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/"]
 
 def params(model_name):
     class ret:
-        if 'M0p2' in model_name: Mach = 0.2
-        if 'M5' in model_name: Mach = 5
+        if 'M0p2' in model_name: Mach, MachNum = 0.2, '0p2'
+        if 'M5'   in model_name: Mach,MachNum = 5, '5'
+        if '1024' in path: N = 1024
+        if '512'  in path: N =  512
+        if '256'  in path: N =  256
         t_turb = 0.5 / Mach
         # do the color selection here as well, based on the model name / path; needs implementation...
         color = 'black'
