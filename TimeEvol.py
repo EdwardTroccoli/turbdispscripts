@@ -10,7 +10,30 @@ import cfpack as cfp
 from cfpack.defaults import *
 from Globals import *
 
-test
+def interpolate(time,ekdr,injr,variable):
+    npts = 1001
+    npts_per_tturb = int(npts / 10)
+    time_int = np.linspace(0, 10, npts) # interpolated time axis
+    ekdr_int = np.interp(time_int, time, ekdr)
+    injr_int = np.interp(time_int, time, injr)
+    tshifts = []
+    L2s = [] 
+    for ishift in range(1, 3*npts_per_tturb):
+        tshifts.append(ishift/npts_per_tturb)
+        L2s.append((np.std(injr_int[:-ishift]-ekdr_int[ishift:])/np.mean(injr_int[:-ishift]))**2)
+    tshifts = np.array(tshifts); L2s=np.array(L2s)
+    ret = cfp.plot(x=tshifts, y=L2s)
+    ax = ret.ax()
+    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
+        fontsize=14, color='black', verticalalignment='top',
+        bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
+    cfp.plot(ylim=[0,0.35], xlabel=r'$t / t_{\textrm{turb}}$',
+                ylabel=r'$\ell^2$ norm of $\varepsilon_{\textrm{kin}}-\varepsilon_{\textrm{inj}}$',
+                save=out_path+"tevol_"+f"{variable}_time_correlation.pdf")
+    # get optimal time shift for max correlation
+    tshift_max_correlation = tshifts[L2s==L2s.min()]
+    print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation,color = 'green')
+
 def plot_var(path, dat, variable):
     t_turb = params(path).t_turb
     Mach = params(path).Mach
@@ -32,10 +55,8 @@ def plot_var(path, dat, variable):
         var = dat['#10_E_kinetic'] / Mach**2
         ylim = [0, 0.65]
         remove_x_ticks = True
-        if Mach == 0.2:
-            ylabel = r"Kinetic energy $E_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2)$"
-        if Mach == 5:
-            ylabel = None
+        if Mach == 0.2: ylabel = r"Kinetic energy $E_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2)$"
+        if Mach == 5: ylabel = None
     elif variable == "injr":
         var = dat['#41_injection_rate']
         ylabel = r'injection rate'
@@ -55,69 +76,80 @@ def plot_var(path, dat, variable):
 
 
 def make_paper_plots(): # please implement properly
-    variable = 'test'
+
+    #variables to plotted for the paper
+    variables = ['mach', 'ekin', 'ired'] 
     t_turb = params(path).t_turb
     Mach = params(path).Mach
     color = params(path).color
     time = dat['01_time'] / t_turb
-    injr = dat['#41_injection_rate'] * t_turb / Mach**2
-    ekdr = dat['#42_ekin_diss_rate'] * t_turb / Mach**2
-    xlabel = r'$t/t_\mathrm{turb}$'
-    ylim = [0, 1.5]
     if Mach == 0.2:
-        ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}} / (\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\, t_{\textrm{turb}}^{-1})$'
-        remove_x_ticks = False
-        dat1 = cfp.read_ascii("../N512M0p2HDRe2500/Turb.dat_cleaned")
-        dat2 = cfp.read_ascii("../N256M0p2HDRe2500/Turb.dat_cleaned")
+        dat512 = cfp.read_ascii("../N512M0p2HDRe2500/Turb.dat")
+        dat256 = cfp.read_ascii("../N256M0p2HDRe2500/Turb.dat")
     if Mach == 5:
-        dat1 = cfp.read_ascii("../N512M5HDRe2500/Turb.dat_cleaned")
-        dat2 = cfp.read_ascii("../N256M5HDRe2500/Turb.dat_cleaned")
-        ylabel = None
+        dat512 = cfp.read_ascii("../N512M5HDRe2500/Turb.dat")
+        dat256 = cfp.read_ascii("../N256M5HDRe2500/Turb.dat")
+    time512 = dat512['01_time'] / t_turb
+    time256 = dat256['01_time'] / t_turb
+
+
+
+    for variable in variables:
+
+        #defaults
         remove_x_ticks = False
-    time1 = dat1['01_time'] / t_turb
-    time2 = dat2['01_time'] / t_turb
-    ekdr1 = dat1['#42_ekin_diss_rate'] * t_turb / Mach**2
-    ekdr2 = dat2['#42_ekin_diss_rate'] * t_turb / Mach**2
-    if args.interpolate:
-        npts = 1001
-        npts_per_tturb = int(npts / 10)
-        time_int = np.linspace(0, 10, npts) # interpolated time axis
-        ekdr_int = np.interp(time_int, time, ekdr)
-        injr_int = np.interp(time_int, time, injr)
-        tshifts = []
-        L2s = []
-        for ishift in range(1, 3*npts_per_tturb):
-            tshifts.append(ishift/npts_per_tturb)
-            L2s.append((np.std(injr_int[:-ishift]-ekdr_int[ishift:])/np.mean(injr_int[:-ishift]))**2)
-        tshifts = np.array(tshifts); L2s=np.array(L2s)
-        ret = cfp.plot(x=tshifts, y=L2s)
+        xlabel,ylabel = None,None
+        if variable == 'ired':
+            injr = dat['#41_injection_rate'] * t_turb / Mach**2
+            ekdr = dat['#42_ekin_diss_rate'] * t_turb / Mach**2
+            ekdr512 = dat512['#42_ekin_diss_rate'] * t_turb / Mach**2
+            ekdr256 = dat256['#42_ekin_diss_rate'] * t_turb / Mach**2
+            xlabel = r'$t/t_\mathrm{turb}$'
+            ylim = [0, 1.5]
+            if Mach == 0.2:
+                ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}} / (\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\, t_{\textrm{turb}}^{-1})$'
+            interpolate(time,ekdr,injr,variable)
+            cfp.plot(x=time256, y=ekdr256, label=r'$256^3$', color='pink')
+            cfp.plot(x=time, y=ekdr, label=r'$1024^3$', color='black')
+            cfp.plot(x=time512, y=ekdr512, label=r'$512^3$', color='green')
+            cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color='b')
+            order = [0, 2, 1, 3] 
+        elif variable == 'ekin':
+            ekin = dat['#10_E_kinetic'] / Mach**2
+            ekin512 = dat512['#10_E_kinetic'] * 1 / Mach**2
+            ekin256 = dat256['#10_E_kinetic'] * 1 / Mach**2
+            cfp.plot(x=time256, y=ekin256, label=r'$256^3$', color='pink')
+            cfp.plot(x=time, y=ekin, label=r'$1024^3$', color='black')
+            cfp.plot(x=time512, y=ekin512, label=r'$512^3$', color='green')
+            ylim = [0, 0.65]
+            remove_x_ticks = True
+            if Mach == 0.2: ylabel = r"Kinetic energy $E_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2)$"
+            order = [0, 2, 1] 
+        elif variable == 'mach':
+            ylabel = r'$\mathcal{M}$'
+            remove_x_ticks = True
+            if Mach == 0.2: ylim = [0, 0.25]
+            if Mach == 5: ylim = [0, 6.5]
+            mach = dat['#14_rms_velocity']
+            mach512 = dat512['#14_rms_velocity'] 
+            mach256 = dat256['#14_rms_velocity']
+            cfp.plot(x=time256, y=mach256, label=r'$256^3$', color='pink')
+            cfp.plot(x=time, y=mach, label=r'$1024^3$', color='black')
+            cfp.plot(x=time512, y=mach512, label=r'$512^3$', color='green')
+            order = [0, 2, 1] 
+        
+        # reorder by desired index
+        ret = cfp.plot()
         ax = ret.ax()
-        ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
-            fontsize=14, color='black', verticalalignment='top',
-            bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
-        cfp.plot(ylim=[0,0.35], xlabel=r'$t / t_{\textrm{turb}}$',
-                    ylabel=r'$\ell^2$ norm of $\varepsilon_{\textrm{kin}}-\varepsilon_{\textrm{inj}}$',
-                    save=out_path+"tevol_"+f"{variable}_time_correlation.pdf")
-        # get optimal time shift for max correlation
-        tshift_max_correlation = tshifts[L2s==L2s.min()]
-        print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation,color = 'green')
-    cfp.plot(x=time2, y=ekdr2, label=r'$256^3$', color='pink')
-    cfp.plot(x=time, y=ekdr, label=r'$1024^3$', color='black')
-    cfp.plot(x=time1, y=ekdr1, label=r'$512^3$', color='green')
-    # reorder by desired index
-    order = [0, 2, 1, 3] 
-    ret = cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color='b')
-    time1 = dat1['01_time'] / t_turb[i]
-    ax = ret.ax()
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend([handles[i] for i in order], [labels[i] for i in order], bbox_to_anchor=(0.005, 0.93))
-    # add Mach label
-    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes, fontsize=14, color='black',
-            verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
-    if remove_x_ticks:
-        ax.set_xticklabels([])
-    # create final plot
-    cfp.plot(xlabel=xlabel, ylabel=ylabel, ylim=ylim, save=fig_path+"tevol_"+f"{variable}.pdf", legend_loc='upper left')
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend([handles[i] for i in order], [labels[i] for i in order], bbox_to_anchor=(0.005, 0.93))
+        # add Mach label
+        ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes, fontsize=14, color='black',
+                verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
+        if remove_x_ticks:
+            ax.set_xticklabels([])
+        # create final plot
+        cfp.plot(xlabel=xlabel, ylabel=ylabel, ylim=ylim, save=fig_path+"tevol_"+f"{variable}_M"+MachNum+"_"+str(N)+".pdf", legend_loc='upper left')
 
 
 
@@ -126,9 +158,13 @@ if __name__ == "__main__":
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Plot different time evolution variables from simulation data.")
     var_choices = ["mach", "ekin", "injr", "ekdr"]
-    parser.add_argument("-v", "--variable", nargs='*', choices=var_choices, required=True, help="Variable to plot; choice of "+str(var_choices))
+    parser.add_argument("-v", "--variable", nargs='*', choices=var_choices, help="Variable to plot; choice of "+str(var_choices))
     parser.add_argument("-ov", "--overwrite", action='store_true', default=False, help="Overwrite files")
+    parser.add_argument("-paper", "--paper_plots", action='store_true', default=False, help="Runs all movie frame plots at paper level quality")
     args = parser.parse_args()
+
+    # Start timing the process
+    start_time = timeit.default_timer()
 
     # loop over simulation paths (in Global.py)
     for i, path in enumerate(sim_paths):
@@ -142,6 +178,21 @@ if __name__ == "__main__":
             cfp.run_shell_command('mkdir '+out_path)
         # read cleaned time evolution file
         dat = cfp.read_ascii(datfile+'_cleaned')
+
+        #params from the path
+        t_turb = params(path).t_turb
+        Mach = params(path).Mach
+        MachNum = params(path).MachNum
+        N = params(path).N
+        color = params(path).color
+
         # loop over variables to plot
-        for var in args.variable:
-            plot_var(path, dat, var)
+        if args.paper_plots==False:
+            for var in args.variable:
+                plot_var(path, dat, var)
+        else:
+            make_paper_plots()
+            
+    # End timing and output the total processing time
+    stop_time = timeit.default_timer()
+    print("Processing time: {:.2f}s".format(stop_time - start_time))
