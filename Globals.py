@@ -18,9 +18,9 @@ def params(model_name):
     class ret:
         if 'M0p2' in model_name: Mach, MachNum = 0.2, '0p2'
         if 'M5'   in model_name: Mach,MachNum = 5, '5'
-        if '1024' in path: N = 1024
-        if '512'  in path: N =  512
-        if '256'  in path: N =  256
+        if '1024' in model_name: N = 1024
+        if '512'  in model_name: N =  512
+        if '256'  in model_name: N =  256
         t_turb = 0.5 / Mach
         # do the color selection here as well, based on the model name / path; needs implementation...
         color = 'black'
