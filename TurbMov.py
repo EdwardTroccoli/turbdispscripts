@@ -14,10 +14,11 @@ import argparse
 import matplotlib.pyplot as plt
 
 
-# function that is called to create the plot_maps of the various variables
+# function that is called to create the plot_maps of the various variables, saves having to call the same script over and over
 def plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file):
     ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, cmap=cmap, xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
     ax = ret.ax()[0]
+    #create box of mach number
     ax.text(0.05, 0.95, r"$\mathcal{M} =$ "+str(Mach), transform=ax.transAxes,
     fontsize=14, color='white', verticalalignment='top',
     bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
@@ -29,8 +30,9 @@ def plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_
     #time_str = cfp.round(time, 3, str_ret=True)
     cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel,  color='white', normalised_coords=True, save=out_file)#text=r"$t/t_\mathrm{turb}="+time_str+r"$",
         
-def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum):
+def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum, N):
 
+    #set defaults for quick visualisation plots
     log = True
     cmap = 'afmhot'
     cmap_label = None
@@ -38,25 +40,29 @@ def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum)
     vmin,vmax = None,None
     remove_x_ticks,remove_y_ticks = None,None
 
+    #need to handle vorticity and other variables separately as they come from plot files and slice files respectively.
+
     #loop over plot files for vorticity
     if variable == "vort":
+        cmap_label = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
         for i, filen in enumerate(plot_files):
+                #call vorticity computer from Globals to make the slice files
                 compute_vort(filen,overwrite=False)
+                #need to construct the filenames appropiately as they are stored in the movie_files directory
                 vortx = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_x_slice_z.h5')
                 vorty = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_y_slice_z.h5')
                 vortz = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_z_slice_z.h5')
                 vortx,vorty,vortz = hdfio.read(vortx, "vorticity_x_slice"), hdfio.read(vorty, "vorticity_y_slice"), hdfio.read(vortz, "vorticity_z_slice")
 
-                var = np.sqrt(vortx**2+vorty**2+vortz**2)
+                var = np.sqrt(vortx**2+vorty**2+vortz**2)*((1/N)/ Mach)
                 out_file = out_path+f"frame_{variable}_{i:06d}.png"
 
                 plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file)
         return
 
-    # loop over movie files for other variables
+    #loop over movie files for other variables
     for i, filen in enumerate(slices):
 
-        # defaults
         if variable == "dens":
             cmap_label = r'Density $\rho/\langle\rho\rangle$'
             var = hdfio.read(filen, "dens_slice_xy")
@@ -76,20 +82,27 @@ def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum)
         out_file = out_path+f"frame_{variable}_000250_M{MachNum}.pdf"
         plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file)
 
-def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum):
+def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum, N):
+
+    #variables that are relevant for the paper to plot
     variables = ['dens','ekin', 'ekdr', 'vort']
 
+    #set default parameters
     log = True
     cmap = 'afmhot'
     cmap_label = None
     xlabel,ylabel = r'$x$',r'$y$'
-    vmin,vmax = None,None
-    remove_x_ticks,remove_y_ticks = None,None
     ekdr_min,ekdr_max = 1e-4,1e3
     ekin_min,ekin_max = 1e-2,1e2
 
+    #same logic for handling the paper plots
     for variable in variables:
+
+        vmin,vmax = None,None
+        remove_x_ticks,remove_y_ticks = None,None
+
         if variable == "vort":
+            cmap_label = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
             for i, filen in enumerate(plot_files):
                     compute_vort(filen,overwrite=False)
                     vortx = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_x_slice_z.h5')
@@ -97,7 +110,7 @@ def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum):
                     vortz = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_z_slice_z.h5')
                     vortx,vorty,vortz = hdfio.read(vortx, "vorticity_x_slice"), hdfio.read(vorty, "vorticity_y_slice"), hdfio.read(vortz, "vorticity_z_slice")
 
-                    var = np.sqrt(vortx**2+vorty**2+vortz**2)
+                    var = np.sqrt(vortx**2+vorty**2+vortz**2)*((1/N) / Mach)
                     out_file = out_path+f"frame_{variable}_{i:06d}.png"
 
                     plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file)
@@ -164,6 +177,9 @@ if __name__ == "__main__":
         
         t_turb = params(path).t_turb
         Mach = params(path).Mach
+        if '1024' in path: N = 1024
+        if  '512' in path: N =  512
+        if  '256' in path: N =  256
 
         if '0p2' in path:
             MachNum ='0p2'
@@ -182,9 +198,9 @@ if __name__ == "__main__":
         if args.paper_plots == False:
             for var in args.variable:
                 # call plot function
-                plot_variable(slices, plot_files, out_path, var, t_turb, Mach, MachNum)
+                plot_variable(slices, plot_files, out_path, var, t_turb, Mach, MachNum, N)
         else:
-            make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum)
+            make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum, N)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
