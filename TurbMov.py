@@ -13,6 +13,8 @@ from Globals import *
 import argparse
 import matplotlib.pyplot as plt
 
+
+# function that is called to create the plot_maps of the various variables
 def plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file):
     ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, cmap=cmap, xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
     ax = ret.ax()[0]
@@ -27,30 +29,23 @@ def plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_
     #time_str = cfp.round(time, 3, str_ret=True)
     cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel,  color='white', normalised_coords=True, save=out_file)#text=r"$t/t_\mathrm{turb}="+time_str+r"$",
         
-def plot_variable(slices, plot_files, out_path, variable, tturb, Mach):
-
-    if '0p2' in out_path:
-            MachNum ='0p2'
-    elif '5' in out_path:
-        MachNum = '5'
+def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum):
 
     log = True
     cmap = 'afmhot'
     cmap_label = None
-    xlabel,ylabel = None,None
+    xlabel,ylabel = r'$x$',r'$y$'
     vmin,vmax = None,None
     remove_x_ticks,remove_y_ticks = None,None
 
-    #loop over plot files
+    #loop over plot files for vorticity
     if variable == "vort":
         for i, filen in enumerate(plot_files):
                 compute_vort(filen,overwrite=False)
                 vortx = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_x_slice_z.h5')
                 vorty = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_y_slice_z.h5')
                 vortz = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_z_slice_z.h5')
-                vortx = hdfio.read(vortx, "vorticity_x_slice")
-                vorty = hdfio.read(vorty, "vorticity_y_slice")
-                vortz = hdfio.read(vortz, "vorticity_z_slice")
+                vortx,vorty,vortz = hdfio.read(vortx, "vorticity_x_slice"), hdfio.read(vorty, "vorticity_y_slice"), hdfio.read(vortz, "vorticity_z_slice")
 
                 var = np.sqrt(vortx**2+vorty**2+vortz**2)
                 out_file = out_path+f"frame_{variable}_{i:06d}.png"
@@ -58,64 +53,104 @@ def plot_variable(slices, plot_files, out_path, variable, tturb, Mach):
                 plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file)
         return
 
-    # loop over movie files
+    # loop over movie files for other variables
     for i, filen in enumerate(slices):
 
         # defaults
-        ekdr_min,ekdr_max = 1e-4,1e3
-        ekin_min,ekin_max = 1e-2,1e2
         if variable == "dens":
-            if '0p2' in out_path:
-                dens_min = 0.95
-                dens_max = 1.035
-                ylabel = r'$y$'
-            elif '5' in out_path:
-                dens_min = 1e-2
-                dens_max = 1e2
-                cmap_label = r'Density $\rho/\langle\rho\rangle$'
-                remove_y_ticks = True
-            vmin = dens_min
-            vmax = dens_max
+            cmap_label = r'Density $\rho/\langle\rho\rangle$'
             var = hdfio.read(filen, "dens_slice_xy")
-            xlabel = r'$x$'
         elif variable == "ekin":
-            remove_x_ticks = True
             cmap = 'RdPu'
-            vmin = ekin_min
-            vmax = ekin_max
             dens = hdfio.read(filen, "dens_slice_xy")
-            velx = hdfio.read(filen, "velx_slice_xy")
-            vely = hdfio.read(filen, "vely_slice_xy")
-            velz = hdfio.read(filen, "velz_slice_xy")
+            velx,vely,velz = hdfio.read(filen, "velx_slice_xy"), hdfio.read(filen, "vely_slice_xy"), hdfio.read(filen, "velz_slice_xy")
             var = 0.5 * dens * (velx ** 2 + vely ** 2 + velz ** 2)*(1/Mach**2)
-            if '0p2' in out_path:
-                ylabel = r'$y$'
-            elif '5' in out_path:
-                cmap_label = r"Kinetic energy $E_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2)$"
-                remove_y_ticks = True
+            cmap_label = r"Kinetic energy $E_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2)$"
         elif variable == "ekdr":
-            remove_x_ticks = True
             cmap = 'BuPu'
-            vmin = ekdr_min
-            vmax = ekdr_max
-            var = hdfio.read(filen, "ekdr_slice_xy")*(tturb/Mach**2)
-            if '0p2' in out_path:
-                ylabel = r'$y$'
-            elif '5' in out_path:
-                cmap_label = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
-                remove_y_ticks = True
+            var = hdfio.read(filen, "ekdr_slice_xy")*(t_turb/Mach**2)
+            cmap_label = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
 
         # Define formatted filename correctly
         #out_file = out_path+f"frame_{variable}_{i:06d}.png"
         out_file = out_path+f"frame_{variable}_000250_M{MachNum}.pdf"
         plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file)
 
+def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum):
+    variables = ['dens','ekin', 'ekdr', 'vort']
+
+    log = True
+    cmap = 'afmhot'
+    cmap_label = None
+    xlabel,ylabel = r'$x$',r'$y$'
+    vmin,vmax = None,None
+    remove_x_ticks,remove_y_ticks = None,None
+    ekdr_min,ekdr_max = 1e-4,1e3
+    ekin_min,ekin_max = 1e-2,1e2
+
+    for variable in variables:
+        if variable == "vort":
+            for i, filen in enumerate(plot_files):
+                    compute_vort(filen,overwrite=False)
+                    vortx = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_x_slice_z.h5')
+                    vorty = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_y_slice_z.h5')
+                    vortz = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_z_slice_z.h5')
+                    vortx,vorty,vortz = hdfio.read(vortx, "vorticity_x_slice"), hdfio.read(vorty, "vorticity_y_slice"), hdfio.read(vortz, "vorticity_z_slice")
+
+                    var = np.sqrt(vortx**2+vorty**2+vortz**2)
+                    out_file = out_path+f"frame_{variable}_{i:06d}.png"
+
+                    plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file)
+            return
+        for i, filen in enumerate(slices):
+            if variable == "dens":
+                if '0p2' in out_path:
+                    dens_min = 0.95
+                    dens_max = 1.035
+                    ylabel = r'$y$'
+                elif '5' in out_path:
+                    dens_min = 1e-2
+                    dens_max = 1e2
+                    cmap_label = r'Density $\rho/\langle\rho\rangle$'
+                    remove_y_ticks = True
+                vmin = dens_min
+                vmax = dens_max
+                var = hdfio.read(filen, "dens_slice_xy")
+                xlabel = r'$x$'
+            elif variable == "ekin":
+                remove_x_ticks = True
+                cmap = 'RdPu'
+                vmin,vmax = ekin_min,ekin_max
+                dens = hdfio.read(filen, "dens_slice_xy")
+                velx,vely,velz = hdfio.read(filen, "velx_slice_xy"), hdfio.read(filen, "vely_slice_xy"), hdfio.read(filen, "velz_slice_xy")
+                var = 0.5 * dens * (velx ** 2 + vely ** 2 + velz ** 2)*(1/Mach**2)
+                if '0p2' in out_path:
+                    ylabel = r'$y$'
+                elif '5' in out_path:
+                    cmap_label = r"Kinetic energy $E_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2)$"
+                    remove_y_ticks = True
+            elif variable == "ekdr":
+                remove_x_ticks = True
+                cmap = 'BuPu'
+                vmin,vmax = ekdr_min,ekdr_max
+                var = hdfio.read(filen, "ekdr_slice_xy")*(t_turb/Mach**2)
+                if '0p2' in out_path:
+                    ylabel = r'$y$'
+                elif '5' in out_path:
+                    cmap_label = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
+                    remove_y_ticks = True
+
+        out_file = out_path+f"frame_{variable}_000250_M{MachNum}.pdf"
+        plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file)
+
+
 if __name__ == "__main__":
 
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Plot different variables from simulation data.")
     var_choices = ["dens", "ekin", "ekdr", "vort"]
-    parser.add_argument("-v", "--variable", choices=var_choices, required=True, nargs= '*', help="Variable to plot; choice of "+str(var_choices))
+    parser.add_argument("-v", "--variable", choices=var_choices, nargs= '*', help="Variable to plot; choice of "+str(var_choices))
+    parser.add_argument("-paper", "--paper_plots", action='store_true', default=False, help="Runs all movie frame plots at paper level quality")
     # Parse the command-line arguments
     args = parser.parse_args()
 
@@ -130,18 +165,26 @@ if __name__ == "__main__":
         t_turb = params(path).t_turb
         Mach = params(path).Mach
 
-        for var in args.variable:
-            out_path = path + "movie_files/"
-            if not os.path.isdir(out_path):
-                cfp.run_shell_command('mkdir '+out_path)
+        if '0p2' in path:
+            MachNum ='0p2'
+        elif '5' in path:
+            MachNum = '5'
 
-            # Get all files matching the pattern Turb_slice_xy_*
-            #files = sorted(glob.glob(out_path+"Turb_slice_xy_*"))
-            slices = sorted(glob.glob(out_path+"Turb_slice_xy_000250"))
-            plot_files = sorted(glob.glob(path+"Turb_hdf5_plt_cnt_0050"))
-            
-            # call plot function
-            plot_variable(slices, plot_files, out_path, var, t_turb, Mach)
+        out_path = path + "movie_files/"
+        if not os.path.isdir(out_path):
+            cfp.run_shell_command('mkdir '+out_path)
+
+        # Get all files matching the pattern Turb_slice_xy_*
+        #files = sorted(glob.glob(out_path+"Turb_slice_xy_*"))
+        slices = sorted(glob.glob(out_path+"Turb_slice_xy_000250"))
+        plot_files = sorted(glob.glob(path+"Turb_hdf5_plt_cnt_0050"))
+
+        if args.paper_plots == False:
+            for var in args.variable:
+                # call plot function
+                plot_variable(slices, plot_files, out_path, var, t_turb, Mach, MachNum)
+        else:
+            make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
