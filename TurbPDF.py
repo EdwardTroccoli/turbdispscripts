@@ -19,25 +19,9 @@ from pathlib import Path
 import gc
 import matplotlib.pyplot as plt
 
-
-# function to compute divv and vort, also checks if they already exist and runs only if they dont
-def compute_divv_vort(filename, overwrite=False):
-    # first check if we need to generate anything
-    run_derivative_var = False
-    with h5py.File(filename, "r") as f:
-        if not all(x in f for x in ['vorticity_x', 'vorticity_y', 'vorticity_z', 'divv']):
-            run_derivative_var = True
-    if run_derivative_var or overwrite:
-        # if plot file doesn't already contain -vort and -divv, this will generate them.
-        cfp.run_shell_command(f'mpirun -np 8 derivative_var {filename} -vort -divv')
-
 # computes 1d_pdfs using C++ pdfs function
 def compute_1d_pdf(filename, variable):
     if variable == "ekdr":
-        vmin = -1e4
-        vmax = +1e4
-        bw = 20
-    elif variable == "emdr":
         vmin = -1e4
         vmax = +1e4
         bw = 20
@@ -45,10 +29,6 @@ def compute_1d_pdf(filename, variable):
         vmin = 1e-1
         vmax = 1e1
         bw = 0.002
-    elif variable == "emag":
-        vmin = 0.00001
-        vmax = +1e4
-        bw = 0.009
     elif variable == "ekin":
         vmin = 0.00001
         vmax = +1e4
@@ -59,11 +39,10 @@ def compute_1d_pdf(filename, variable):
         bw = 20
     else:
         print("Variable not implemented.", error=True)
-    if variable in ['emag', 'ekin']:
+    if variable in ['ekin']:
         cfp.run_shell_command(f'mpirun -np 8 pdfs {filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw} -log')
-    elif variable in ["injr", "ekdr", "emdr", "dens"]:
+    elif variable in ["injr", "ekdr", "dens"]:
         cfp.run_shell_command(f'mpirun -np 8 pdfs {filename} -dset {variable} -vmin {vmin} -vmax {vmax} -bw {bw}')
-
 
 # plotting function for 1d pdfs
 def plot_1d_pdf(pdf_dat):
@@ -71,10 +50,6 @@ def plot_1d_pdf(pdf_dat):
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
         cfp.plot(xlabel='Kinetic Energy Dissipation Rate', ylabel='PDF of Kinetic Energy Dissipation Rate', xlim=[0,1e2],
                  yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
-    elif var == "emdr":
-        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
-        cfp.plot(xlabel="Magnetic Energy Dissipation Rate", ylabel='PDF of Magnetic Energy Dissipation Rate',
-                 yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlim=[-1e4,1e4], ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
     elif var == "dens":
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
         cfp.plot(xlabel=r"Density ($\rho/\langle\rho\rangle$)", ylabel=r"PDF of Density ($\rho/\langle\rho\rangle$)",
@@ -83,10 +58,6 @@ def plot_1d_pdf(pdf_dat):
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
         cfp.plot(xlabel="Energy Injection Rate", ylabel='PDF of Energy Injection Rate', xlim=[-1e2,1e2],
                  yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
-    elif var == "emag":
-        cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'])
-        cfp.plot(xlabel="Magnetic Energy", ylabel='PDF of Magnetic Energy', xlim=[0.000001,250],
-                 yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
     elif var == "ekin":
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'], xlabel="Kinetic Energy", ylabel='PDF of Kinetic Energy', xlim=[1e-3,1e2],
                  yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlog=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
@@ -94,7 +65,7 @@ def plot_1d_pdf(pdf_dat):
 
 def compute_2d_pdf(filename, variables, bins, overwrite=False, norm=None):
     #fname_pkl = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + "_" + "M" +MachNumber[i] + ".pkl"
-    fname_pkl = out_path + f"{Path(filename).stem}_2Dpdf_{variables[1]}_{variables[0]}_M{MachNumber[i]}.pkl"
+    fname_pkl = out_path + f"{Path(filename).stem}_2Dpdf_{variables[1]}_{variables[0]}_M{Mach}.pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         # read data
         gg = fl.FlashGG(filename)
@@ -124,42 +95,31 @@ def compute_2d_pdf(filename, variables, bins, overwrite=False, norm=None):
         ret = dill.load(open(fname_pkl, "rb"))
     return ret
 
-def plot_2Dpdf(po, MachNumber, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
+def plot_2Dpdf(po, MachNum, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
     out_path = path + "PDFs/"
-    save_output = out_path+'averaged_2Dpdf_' + var[1] + "_" + var[0] + "_" + "M" +MachNumber[i] +'.pdf'
+    save_output = out_path+'averaged_2Dpdf_' + var[1] + "_" + var[0] + "_" + "M" +MachNum +'.pdf'
     if not os.path.isdir(out_path):
         cfp.run_shell_command('mkdir '+out_path)
-    remove_x_ticks,remove_y_ticks=None,None
+    remove_x_ticks,remove_y_ticks=False,False
     if po.variables[0] == "ekdr":
         ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
     if po.variables[1] == "dens":
         xlabel = r"Density $\rho/(\langle\rho\rangle)$"
         remove_x_ticks = True
-    if po.variables[1] == "divv":
-        xlabel = r"Divergence $\nabla\cdot\mathbf{v}/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
-        remove_x_ticks = True
     if po.variables[1] == "vorticity":
         xlabel = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
-        remove_x_ticks = False
-    if '0p2' == MachNumber[i]:
+    if '0p2' == MachNum:
         Mach = '0.2'
-        remove_y_ticks = False
-        remove_x_ticks = False
         cmap_label = None
-    elif '5' ==  MachNumber[i]:
+    elif '5' ==  MachNum:
         Mach = '5'
         remove_y_ticks = True
-        remove_x_ticks = False
         ylabel = None
         cmap_label = 'PDF'
     ret = cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel,
                  log=True, xlog=True, ylog=True, cmap_label=cmap_label)
     ax = ret.ax()[0]
-    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes, fontsize=14, color='black', verticalalignment='top')#,
-        #bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
-    if po.variables[1] == "divv":
-        ax.set_xticks([-1e0,-1e-1,-1e-2,-1e-3, 0, 1e-3,1e-2,1e-1,1e0])
-        ax.set_xticklabels(['$-10^0$','$-10^{-1}$','$-10^{-2}$','$-10^{-3}$','$0$', '$10^{-3}$','$10^{-2}$','$10^{-1}$','$10^0$'])
+    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes, fontsize=14, color='black', verticalalignment='top')
     cfp.plot(ax=ret.ax()[0], normalised_coords=True)
     if remove_x_ticks == True:
         ax.set_xticklabels([])
@@ -249,9 +209,9 @@ if __name__ == "__main__":
     # loop over simulations
     for i, path in enumerate(sim_paths):
 
-        if '1024' in path: N = 1024
-        if  '512' in path: N =  512
-        if  '256' in path: N =  256
+        N = params(path).N
+        MachNum = params(path).MachNum
+        Mach = params(path).Mach
 
         print(f'\nWorking on: {path}', color='cyan')
 
@@ -265,7 +225,7 @@ if __name__ == "__main__":
             # loop over simulation variables
             vars_1Dpdf = ["dens", "ekin", "injr", "ekdr"]
             for var in vars_1Dpdf:
-                pdf_aver_file = "aver_1DPDF_"+var+ "_" + "M" +MachNumber[i] + ".pdf_data"
+                pdf_aver_file = "aver_1DPDF_"+var+ "_" + "M" + MachNum + ".pdf_data"
                 if args.overwrite:
                     for d in range(20, 101):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
@@ -285,7 +245,7 @@ if __name__ == "__main__":
         # 2D PDFs
         if args.pdf2d:
             # variables for the 2d pdf plots, can add more.
-            vars_2Dpdf = [["ekdr", "dens"], ["ekdr", "vorticity"], ["ekdr", "divv"]]
+            vars_2Dpdf = [["ekdr", "dens"], ["ekdr", "vorticity"]]
             # loop over simulation variables
             for var in vars_2Dpdf:
                 # set defaults
@@ -295,8 +255,8 @@ if __name__ == "__main__":
                 fit_xlim = None
                 fit_ylim = None
                 # set normalisation
-                if var[1] == "divv" or var[1] == "vorticity":
-                    norm = (1/N) / Mach[i]
+                if var[1] == "vorticity":
+                    norm = (1/N) / Mach
                 # set binning
                 if var[0] == "ekdr":
                     bins_y = np.logspace(-8, 6, 250)
@@ -309,15 +269,13 @@ if __name__ == "__main__":
                     bins_x = np.logspace(-6, 1, 250)
                     by_hand_fit = [2.0, 2.5] # exponent and normalisation of power-law line to draw
                     fit_xlim = [1e-2, 3e-1]
-                if var[1] == "divv":
-                    bins_x = cfp.symlogspace(-4, 0, 250)
-                fname_pkl = out_path+"averaged_2Dpdf_" + var[1] + "_" + var[0] + "_" + "M" +MachNumber[i] + ".pkl"
+                fname_pkl = out_path+"averaged_2Dpdf_" + var[1] + "_" + var[0] + "_" + "M" + MachNum + ".pkl"
                 if not os.path.isfile(fname_pkl) or args.overwrite:
                     pdf_data = []
                     for d in range(20, 101, 1):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-                        if "vorticity" in var or "divv" in var:
-                            compute_divv_vort(path+filename, overwrite=False)
+                        if "vorticity" in var:
+                            compute_vort(path+filename, overwrite=False)
                         po = compute_2d_pdf(path+filename, var, bins=[bins_x,bins_y],overwrite = args.overwrite, norm=norm)
                         pdf_data.append(po.pdf)
                     # setup a class to store edges and the averaged pdf data.
@@ -333,7 +291,7 @@ if __name__ == "__main__":
                     print("Read '"+fname_pkl+"'", color="green")
                     ret = dill.load(open(fname_pkl, "rb"))
                 # Plot
-                plot_2Dpdf(ret, MachNumber, do_fit=do_fit, by_hand_fit=by_hand_fit, fit_xlim=fit_xlim, fit_ylim=fit_ylim)
+                plot_2Dpdf(ret, MachNum, do_fit=do_fit, by_hand_fit=by_hand_fit, fit_xlim=fit_xlim, fit_ylim=fit_ylim)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
