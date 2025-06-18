@@ -29,16 +29,16 @@ def plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_
     #time = hdfio.read(filen, "time")[0] / tturb
     #time_str = cfp.round(time, 3, str_ret=True)
     cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel,  color='white', normalised_coords=True, save=out_file)#text=r"$t/t_\mathrm{turb}="+time_str+r"$",
-        
+
 def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum, N):
 
     #set defaults for quick visualisation plots
     log = True
     cmap = 'afmhot'
     cmap_label = None
-    xlabel,ylabel = r'$x$',r'$y$'
-    vmin,vmax = None,None
-    remove_x_ticks,remove_y_ticks = None,None
+    xlabel, ylabel = r'$x$', r'$y$'
+    vmin, vmax = None, None
+    remove_x_ticks, remove_y_ticks = None, None
 
     #need to handle vorticity and other variables separately as they come from plot files and slice files respectively.
 
@@ -47,7 +47,7 @@ def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum,
         cmap_label = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
         for i, filen in enumerate(plot_files):
                 #call vorticity computer from Globals to make the slice files
-                compute_vort(filen,overwrite=False)
+                compute_vort(filen, overwrite=False)
                 #need to construct the filenames appropiately as they are stored in the movie_files directory
                 vortx = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_x_slice_z.h5')
                 vorty = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_y_slice_z.h5')
