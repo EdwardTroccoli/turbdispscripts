@@ -2,22 +2,26 @@
 # -*- coding: utf-8 -*-
 # written by Edward Troccoli & Christoph Federrath, 2025
 
+from cfpack.defaults import *
 import cfpack as cfp
 import os
 import h5py
+import glob
+import argparse
 
 # create figure output path
 fig_path = "../Figures/"
 if not os.path.isdir(fig_path):
     cfp.run_shell_command('mkdir '+fig_path)
 
-# sim_paths = ["../N1024M0p2HDRe2500HP/", "../N1024M0p2HDRe2500/", "../N1024M5HDRe2500HP/", "../N1024M5HDRe2500/"]
-sim_paths = ["../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/"]
+sim_paths = ["N256M0p2HDRe2500", "N512M0p2HDRe2500", "N1024M0p2HDRe2500", "N256M5HDRe2500", "N512M5HDRe2500", "N1024M5HDRe2500"]
+# sim_paths = ["../N1024M0p2HDRe2500/"]
 
 def params(model_name):
     class ret:
-        if 'M0p2' in model_name: Mach, MachNum = 0.2, '0p2'
-        if 'M5'   in model_name: Mach,MachNum = 5, '5'
+        if 'M0p2' in model_name: Mach = 0.2
+        if 'M5'   in model_name: Mach = 5
+        if '2048' in model_name: N = 2048
         if '1024' in model_name: N = 1024
         if '512'  in model_name: N =  512
         if '256'  in model_name: N =  256
@@ -26,27 +30,61 @@ def params(model_name):
         color = 'black'
     return ret
 
-# function to compute vort, also checks if they already exist and runs only if they dont
-def compute_vort(filename, overwrite=False):
-
+# function to compute vort, also checks if they already exist and runs only if they don't
+def compute_vort_file(filename, ncpu=8, pixel=1024, overwrite=False):
     # first check if we need to generate anything
     run_derivative_var = False
     with h5py.File(filename, "r") as f:
         if not all(x in f for x in ['vorticity_x', 'vorticity_y', 'vorticity_z']):
             run_derivative_var = True
     if run_derivative_var or overwrite:
-        # if plot file doesn't already contain -vort and this will generate them.
-        cfp.run_shell_command(f'mpirun -np 8 derivative_var {filename} -vort')
-    
-    slice_x_filename = f"{filename}_vorticity_x_slice_z.h5"
-    slice_y_filename = f"{filename}_vorticity_y_slice_z.h5"
-    slice_z_filename = f"{filename}_vorticity_z_slice_z.h5"
-    dump_location = os.path.dirname(slice_x_filename)+'/movie_files/'+os.path.basename(slice_x_filename)
-    if not os.path.exists(dump_location) or overwrite:
-        cfp.print(f"Generating slice file...",color='magenta')
-        cfp.run_shell_command(f'mpirun -np 8 projection {filename} -dset vorticity_x -slice -pixel 1024 1024')
-        cfp.run_shell_command(f'mpirun -np 8 projection {filename} -dset vorticity_y -slice -pixel 1024 1024')
-        cfp.run_shell_command(f'mpirun -np 8 projection {filename} -dset vorticity_z -slice -pixel 1024 1024')
-        cfp.run_shell_command(f'mv {slice_x_filename} {slice_y_filename} {slice_z_filename} '+ os.path.dirname(slice_x_filename)+'/movie_files/')
+        # if plot file doesn't already contain vorticty components, generate them
+        cfp.run_shell_command('mpirun -np '+str(ncpu)+' derivative_var '+filename+' -vort')
     else:
-        cfp.print(f"Slice file already exists.",color='red')
+        cfp.print("Vorticity components already in '"+filename+"' -- skipping creation.", color='green')
+    # taking slices
+    for dim in ['x', 'y', 'z']:
+        slice_filename = filename+"_vorticity_"+dim+"_slice_z.h5"
+        outfile = os.path.dirname(slice_filename)+'/movie_files/'+os.path.basename(slice_filename)
+        if not os.path.exists(outfile) or overwrite:
+            cfp.run_shell_command('mpirun -np '+str(ncpu)+' projection '+filename+' -dset vorticity_'+dim+' -slice -pixel '+str(pixel)+' '+str(pixel))
+            cfp.run_shell_command('mv '+slice_filename+' '+outfile)
+        else:
+            cfp.print("Slice file '"+outfile+"' already exists -- skipping.", color='green')
+
+def compute_vort(overwrite=False):
+    for sim_path in sim_paths:
+        if params(sim_path).N == 2048:
+            ncpu = 48
+        else:
+            ncpu = 8
+        plot_files = sorted(glob.glob(sim_path+"Turb_hdf5_plt_cnt_0050"))
+        for plot_file in plot_files:
+            compute_vort_file(plot_file, ncpu=ncpu, pixel=params(sim_path).N, overwrite=overwrite)
+
+def clean_datfile(path, overwrite=False):
+    print(f'Working on: {path}', color='green')
+    # clean the .dat file
+    datfile = path+'Turb.dat'
+    if not os.path.isfile(datfile+'_cleaned') or overwrite:
+        cfp.run_shell_command('flashlib.py datfile -clean '+datfile)
+    out_path = path + "TimeEvol/"
+    if not os.path.isdir(out_path):
+        cfp.run_shell_command('mkdir '+out_path)
+
+
+if __name__ == "__main__":
+
+    # Argument parser setup
+    parser = argparse.ArgumentParser(description="Main data analysis.")
+    parser.add_argument("-ov", "--overwrite", action='store_true', default=False, help="Overwrite files")
+    parser.add_argument("-clean_datfile", "--clean_datfile", action='store_true', default=False, help="Clean the .dat file(s).")
+    parser.add_argument("-compute_vort", "--compute_vort", action='store_true', default=False, help="Compute vorticity.")
+    args = parser.parse_args()
+
+    if args.clean_datfile:
+        for path in sim_paths:
+            clean_datfile(path, overwrite=args.overwrite)
+
+    if args.compute_vort:
+        compute_vort(overwrite=args.overwrite)
