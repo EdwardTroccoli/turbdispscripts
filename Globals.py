@@ -4,7 +4,7 @@
 
 from cfpack.defaults import *
 import cfpack as cfp
-import os
+import os, time
 import h5py
 import glob
 import argparse
@@ -15,7 +15,8 @@ if not os.path.isdir(fig_path):
     cfp.run_shell_command('mkdir '+fig_path)
 
 # sim_paths = ["N256M0p2HDRe2500", "N512M0p2HDRe2500", "N1024M0p2HDRe2500", "N256M5HDRe2500", "N512M5HDRe2500", "N1024M5HDRe2500"]
-sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
+#sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
+sim_paths = ["../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/"]
 
 def params(model_name):
     class ret:
@@ -62,6 +63,29 @@ def compute_vort(overwrite=False):
         for plot_file in plot_files:
             compute_vort_file(plot_file, ncpu=ncpu, pixel=params(sim_path).N, overwrite=overwrite)
 
+# computes spectra using C++ pdfs function
+def compute_spectra_file(filename, out_path='./', ncpu=8, overwrite=False):
+    # Define expected output files
+    extensions = ["_spect_vels.dat", "_spect_dset_ekdr.dat"]
+    output_files = [filename.split('/')[-1]+"_spect_vels.dat", filename.split('/')[-1]+"_spect_dset_ekdr.dat"]
+    # Check if file exists
+    if not (os.path.exists(out_path+filename.split('/')[-1]+extensions[0]) and os.path.exists(out_path+filename.split('/')[-1]+extensions[1])) or overwrite:
+        # run the spectra command
+        cfp.run_shell_command(f'mpirun -np 64 spectra {filename} -types 0 1 -dsets ekdr')
+        time.sleep(0.1)
+        for ext in extensions:
+            cfp.run_shell_command("mv "+filename+ext+" "+out_path)
+
+def compute_spectra(overwrite=False):
+    for sim_path in sim_paths:
+        if params(sim_path).N == 2048:
+            ncpu = 512
+        else:
+            ncpu = 8
+        plot_files = sorted(glob.glob(sim_path+"Turb_hdf5_plt_cnt_0???"))
+        for plot_file in plot_files:
+            compute_spectra_file(plot_file, ncpu=ncpu, overwrite=overwrite)
+
 def clean_datfile(path, overwrite=False):
     print(f'Working on: {path}', color='green')
     # clean the .dat file
@@ -72,7 +96,6 @@ def clean_datfile(path, overwrite=False):
     if not os.path.isdir(out_path):
         cfp.run_shell_command('mkdir '+out_path)
 
-
 if __name__ == "__main__":
 
     # Argument parser setup
@@ -80,6 +103,7 @@ if __name__ == "__main__":
     parser.add_argument("-ov", "--overwrite", action='store_true', default=False, help="Overwrite files")
     parser.add_argument("-clean_datfile", "--clean_datfile", action='store_true', default=False, help="Clean the .dat file(s).")
     parser.add_argument("-compute_vort", "--compute_vort", action='store_true', default=False, help="Compute vorticity.")
+    parser.add_argument("-compute_spectra", "--compute_spectra", action='store_true', default=False, help="Compute spectra files.")
     args = parser.parse_args()
 
     if args.clean_datfile:
@@ -88,3 +112,6 @@ if __name__ == "__main__":
 
     if args.compute_vort:
         compute_vort(overwrite=args.overwrite)
+
+    if args.compute_spectra:
+        compute_spectra(overwrite=args.overwrite)
