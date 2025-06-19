@@ -9,6 +9,8 @@ import os
 import cfpack as cfp
 from cfpack.defaults import *
 from Globals import *
+cfp.import_matplotlibrc(fontscale=0.8)
+from matplotlib import rcParams
 
 
 def plot_var(path, dat, variable):
@@ -76,20 +78,14 @@ def make_paper_plots(): # please implement properly
                     injr = dat['#41_injection_rate'] * t_turb / Mach**2
                     ekdr = dat['#42_ekin_diss_rate'] * t_turb / Mach**2
                     xlabel = r'$t/t_\mathrm{turb}$'
-                    ylim = [0, 1.75]
+                    ylim = [0, 1.5]
                     if mach == 0.2:
                         ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}} / (\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\, t_{\textrm{turb}}^{-1})$'
-                    lf = cfp.legend_formatter()
-                    xpos, ypos, dy, length, textpad = 0.012, 0.82, 0.08, 1.25, 0.1
-                    lf.pos = (xpos, ypos-isim*dy)
-                    lf.length = length
-                    lf.textpad = textpad
+                    xpos, ypos, dx, length = 0.012, 0.84, 0.19, 1.4
+                    lf = cfp.legend_formatter(pos=(xpos+isim*dx, ypos), length=length)
                     ret = cfp.plot(x=time, y=ekdr, label=r'$'+str(N)+'^3$', color=color[isim], linestyle=linestyle[isim], legend_formatter=lf)
                     if N==2048:
-                        lf = cfp.legend_formatter()
-                        lf.pos = (xpos, ypos-4*dy)
-                        lf.length = length
-                        lf.textpad = textpad
+                        lf = cfp.legend_formatter(pos=(xpos+4*dx, ypos), length=length)
                         cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color='blue', legend_formatter=lf)
                 if fig == 'Time_correlation':
                     if N==2048:
@@ -114,10 +110,9 @@ def make_paper_plots(): # please implement properly
                         tshift_max_correlation = tshifts[L2s==L2s.min()]
                         print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation, color='yellow')
             # add Mach label
-            ax = ret.ax()
-            ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {mach}$", transform=ax.transAxes, fontsize=14, color='black',
-                    verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
+            cfp.plot(x=0.04, y=0.91, text=rf"$\mathcal{{M}} = {mach}$", normalised_coords=True)
             if remove_x_ticks:
+                ax = ret.ax()
                 ax.set_xticklabels([])
             # create final plot
             cfp.plot(xlabel=xlabel, ylabel=ylabel, ylim=ylim, save=fig_path+fig+"_M"+MachStr+".pdf")
