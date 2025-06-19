@@ -76,7 +76,7 @@ def make_paper_plots(): # please implement properly
                     injr = dat['#41_injection_rate'] * t_turb / Mach**2
                     ekdr = dat['#42_ekin_diss_rate'] * t_turb / Mach**2
                     xlabel = r'$t/t_\mathrm{turb}$'
-                    ylim = [0, 1.5]
+                    ylim = [0, 1.75]
                     if mach == 0.2:
                         ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}} / (\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\, t_{\textrm{turb}}^{-1})$'
                     lf = cfp.legend_formatter()
