@@ -12,23 +12,22 @@ from cfpack.defaults import *
 from Globals import *
 import argparse
 import matplotlib.pyplot as plt
-
+cfp.import_matplotlibrc(fontscale=0.8)
 
 # function that is called to create the plot_maps of the various variables, saves having to call the same script over and over
 def plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file):
     ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, cmap=cmap, xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
     ax = ret.ax()[0]
-    #create box of mach number
-    ax.text(0.05, 0.95, r"$\mathcal{M} =$ "+str(Mach), transform=ax.transAxes,
-    fontsize=14, color='white', verticalalignment='top',
-    bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
+    # create box for Mach number label
+    ax.text(0.05, 0.95, r"$\mathcal{M}=$ "+str(Mach), transform=ax.transAxes, color='white', verticalalignment='top',
+            bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
     if remove_x_ticks == True:
         ax.set_xticklabels([])
     if remove_y_ticks == True:
         ax.set_yticklabels([])
     #time = hdfio.read(filen, "time")[0] / tturb
     #time_str = cfp.round(time, 3, str_ret=True)
-    cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel,  color='white', normalised_coords=True, save=out_file)#text=r"$t/t_\mathrm{turb}="+time_str+r"$",
+    cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, color='white', normalised_coords=True, save=out_file)#text=r"$t/t_\mathrm{turb}="+time_str+r"$",
 
 def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, N):
 
