@@ -30,7 +30,7 @@ def plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_
     #time_str = cfp.round(time, 3, str_ret=True)
     cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel,  color='white', normalised_coords=True, save=out_file)#text=r"$t/t_\mathrm{turb}="+time_str+r"$",
 
-def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum, N):
+def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, N):
 
     #set defaults for quick visualisation plots
     log = True
@@ -40,6 +40,10 @@ def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum,
     vmin, vmax = None, None
     remove_x_ticks, remove_y_ticks = None, None
 
+    if '0p2' in out_path:
+        MachNum = '0p2'
+    elif '5' in out_path:
+        MachNum = '5'
     #need to handle vorticity and other variables separately as they come from plot files and slice files respectively.
 
     #loop over plot files for vorticity
@@ -82,7 +86,7 @@ def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, MachNum,
         out_file = out_path+f"frame_{variable}_000250_M{MachNum}.pdf"
         plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file)
 
-def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum, N):
+def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, N):
 
     #variables that are relevant for the paper to plot
     variables = ['dens','ekin', 'ekdr', 'vort']
@@ -100,6 +104,11 @@ def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum, N):
 
         vmin,vmax = None,None
         remove_x_ticks,remove_y_ticks = None,None
+
+        if '0p2' in out_path:
+            MachNum = '0p2'
+        elif '5' in out_path:
+            MachNum = '5'
 
         if variable == "vort":
             cmap_label = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
@@ -178,7 +187,6 @@ if __name__ == "__main__":
         t_turb = params(path).t_turb
         Mach = params(path).Mach
         N = params(path).N
-        MachNum = params(path).MachNum
 
         out_path = path + "movie_files/"
         if not os.path.isdir(out_path):
@@ -192,7 +200,7 @@ if __name__ == "__main__":
         if args.paper_plots == False:
             for var in args.variable:
                 # call plot function
-                plot_variable(slices, plot_files, out_path, var, t_turb, Mach, MachNum, N)
+                plot_variable(slices, plot_files, out_path, var, t_turb, Mach, N)
         else:
             make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum, N)
 
