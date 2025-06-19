@@ -18,6 +18,7 @@ import h5py
 from pathlib import Path
 import gc
 import matplotlib.pyplot as plt
+cfp.import_matplotlibrc(fontscale=0.8)
 
 # computes 1d_pdfs using C++ pdfs function
 def compute_1d_pdf(filename, variable):
@@ -96,6 +97,8 @@ def compute_2d_pdf(filename, variables, bins, overwrite=False, norm=None):
     return ret
 
 def plot_2Dpdf(po, MachNum, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
+    if 'M0p2' in out_path: MachNum = '0p2'
+    if 'M5' in out_path: MachNum = '5'
     out_path = path + "PDFs/"
     save_output = out_path+'averaged_2Dpdf_' + var[1] + "_" + var[0] + "_" + "M" +MachNum +'.pdf'
     if not os.path.isdir(out_path):
@@ -210,7 +213,6 @@ if __name__ == "__main__":
     for i, path in enumerate(sim_paths):
 
         N = params(path).N
-        MachNum = params(path).MachNum
         Mach = params(path).Mach
 
         print(f'\nWorking on: {path}', color='cyan')

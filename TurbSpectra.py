@@ -10,39 +10,17 @@ from cfpack.defaults import *
 from turblib import aver_spect, write_spect, read_spect
 from Globals import *
 import glob
-
-# computes spectra using C++ pdfs function
-def compute_spectra(filename, out_path='./'):
-    # Define expected output files
-    extensions = ["_spect_vels.dat", "_spect_dset_ekdr.dat"]
-    output_files = [filename.split('/')[-1]+"_spect_vels.dat", filename.split('/')[-1]+"_spect_dset_ekdr.dat"]
-    # Check if file exists
-    if not (os.path.exists(out_path+filename.split('/')[-1]+extensions[0]) and os.path.exists(out_path+filename.split('/')[-1]+extensions[1])):
-        # run the spectra command
-        cfp.run_shell_command(f'mpirun -np 64 spectra {filename} -types 0 1 -dsets ekdr')
-        time.sleep(0.1)
-        for ext in extensions:
-            cfp.run_shell_command("mv "+filename+ext+" "+out_path)
-
+cfp.import_matplotlibrc(fontscale=0.8)
 
 # plotting function for spectras
-def plot_spectra(dat, var):
+def plot_spectra(dat, var, Mach):
+    ylabel = None
     if var == "vels": 
         xlabel = None
-        if '0p2' in out_path:
-            Mach='0.2'
-            ylabel=r'Power spectrum of $E_\mathrm{kin}$'
-        elif '5' in out_path:
-            Mach='5'
-            ylabel = None
+        if '0p2' in out_path: ylabel=r'Power spectrum of $E_\mathrm{kin}$'
     if var == "ekdr": 
         xlabel = r'Wavenumber $k$'
-        if '0p2' in out_path:
-            Mach='0.2'
-            ylabel=r'Power spectrum of $\varepsilon_\mathrm{kin}$'
-        elif '5' in out_path:
-            Mach='5'
-            ylabel = None
+        if '0p2' in out_path: ylabel=r'Power spectrum of $\varepsilon_\mathrm{kin}$'
     y = 10**dat['col6']
     sigylo = y - 10**(dat['col6']-dat['col7'])
     sigyup = 10**(dat['col6']+dat['col7']) - y
@@ -52,11 +30,11 @@ def plot_spectra(dat, var):
     yerr=[sigylo, sigyup],
     shaded_err=True)
     ax = ret.ax()
-    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
+    ax.text(0.95, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes,
         fontsize=14, color='black', verticalalignment='top',
         bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
     cfp.plot(ax=ret.ax(), xlabel=xlabel, ylabel=ylabel, xlog=True, ylog=True,
-            save=out_path+'aver_spectra'+ "_" + var + "_" + "M" +MachNumber[i] +'.pdf')
+            save=out_path+'aver_spectra'+ "_" + var + "_" + "M" +MachNum +'.pdf')
 
 if __name__ == "__main__":
 
@@ -83,14 +61,18 @@ if __name__ == "__main__":
         if not os.path.isdir(out_path):
             cfp.run_shell_command('mkdir '+out_path)
 
+        Mach = params(path).Mach
+        if 'M0p2' in out_path: MachNum = '0p2'
+        if 'M5' in out_path: MachNum = '5'
+
         # loop over simulation variables
         vars = ['ekdr', 'vels']
         for var in vars:
-            spectra_aver_file = out_path+"aver_spectra_"+var+"_M"+MachNumber[i]+".dat"
+            spectra_aver_file = out_path+"aver_spectra_"+var+"_M"+MachNum+".dat"
             if not os.path.isfile(spectra_aver_file) or args.overwrite:
                 for d in range(20, 101, 1):
                     filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-                    compute_spectra(path+filename, out_path=out_path) # compute the spectra by calling C++ 'spectra'
+                    compute_spectra(args.overwrite) # compute the spectra by calling C++ 'spectra'
                 if var == 'vels':
                     spectra_files = sorted(glob.glob(out_path+"*_spect_vels.dat"))
                 elif var == 'ekdr':
@@ -100,7 +82,7 @@ if __name__ == "__main__":
 
             # plot the spectra
             spectra_dat, spectra_header = read_spect(spectra_aver_file) # read the PDF data
-            plot_spectra(spectra_dat, var)
+            plot_spectra(spectra_dat, var, Mach)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()

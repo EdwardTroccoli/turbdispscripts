@@ -88,26 +88,23 @@ def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, N):
 def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, N):
 
     #variables that are relevant for the paper to plot
-    variables = ['dens','ekin', 'ekdr', 'vort']
+    variables = ['dens', 'ekdr', 'vort']
 
     #set default parameters
     log = True
     cmap = 'afmhot'
-    cmap_label = None
-    xlabel,ylabel = r'$x$',r'$y$'
-    ekdr_min,ekdr_max = 1e-4,1e3
-    ekin_min,ekin_max = 1e-2,1e2
+    ekdr_min, ekdr_max = 1e-4, 1e3
 
     #same logic for handling the paper plots
     for variable in variables:
 
         vmin,vmax = None,None
         remove_x_ticks,remove_y_ticks = None,None
+        cmap_label = None
+        xlabel, ylabel = None, None
 
-        if '0p2' in out_path:
-            MachNum = '0p2'
-        elif '5' in out_path:
-            MachNum = '5'
+        if 'M0p2' in out_path: MachNum = '0p2'
+        if 'M5' in out_path: MachNum = '5'
 
         if variable == "vort":
             cmap_label = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
@@ -126,30 +123,16 @@ def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, N):
         for i, filen in enumerate(slices):
             if variable == "dens":
                 if '0p2' in out_path:
-                    dens_min = 0.95
-                    dens_max = 1.035
+                    vmin = 0.95
+                    vmax = 1.035
                     ylabel = r'$y$'
                 elif '5' in out_path:
-                    dens_min = 1e-2
-                    dens_max = 1e2
+                    vmin = 1e-2
+                    vmax = 1e2
                     cmap_label = r'Density $\rho/\langle\rho\rangle$'
                     remove_y_ticks = True
-                vmin = dens_min
-                vmax = dens_max
                 var = hdfio.read(filen, "dens_slice_xy")
                 xlabel = r'$x$'
-            elif variable == "ekin":
-                remove_x_ticks = True
-                cmap = 'RdPu'
-                vmin,vmax = ekin_min,ekin_max
-                dens = hdfio.read(filen, "dens_slice_xy")
-                velx,vely,velz = hdfio.read(filen, "velx_slice_xy"), hdfio.read(filen, "vely_slice_xy"), hdfio.read(filen, "velz_slice_xy")
-                var = 0.5 * dens * (velx ** 2 + vely ** 2 + velz ** 2)*(1/Mach**2)
-                if '0p2' in out_path:
-                    ylabel = r'$y$'
-                elif '5' in out_path:
-                    cmap_label = r"Kinetic energy $E_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2)$"
-                    remove_y_ticks = True
             elif variable == "ekdr":
                 remove_x_ticks = True
                 cmap = 'BuPu'
@@ -201,7 +184,7 @@ if __name__ == "__main__":
                 # call plot function
                 plot_variable(slices, plot_files, out_path, var, t_turb, Mach, N)
         else:
-            make_paper_plots(slices, plot_files, out_path, t_turb, Mach, MachNum, N)
+            make_paper_plots(slices, plot_files, out_path, t_turb, Mach, N)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
