@@ -17,19 +17,19 @@ def plot_var(path, dat, variable):
     t_turb = params(path).t_turb
     Mach = params(path).Mach
     time = dat['01_time'] / t_turb
-    xlabel=r'$t/t_{\textrm{turb}}$'
+    xlabel=r'$t/t_{\mathrm{turb}}$'
     if variable == "mach":
         var = dat['#14_rms_velocity']
         ylabel = r'$\mathcal{M}$'
     elif variable == "ekin":
         var = dat['#10_E_kinetic']
-        ylabel = r"Kinetic energy $E_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2)$"
+        ylabel = r"Kinetic energy $E_{\mathrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\mathrm{s}}^2)$"
     elif variable == "injr":
         var = dat['#41_injection_rate']
         ylabel = r'injection rate'
     elif variable == "ekdr":
         var = dat['#42_ekin_diss_rate']
-        ylabel = r'$\varepsilon_{\textrm{kin}}$'
+        ylabel = r'$\varepsilon_{\mathrm{kin}}$'
     # create plot
     ret = cfp.plot(x=time, y=var)
     # add Mach label
@@ -78,15 +78,15 @@ def make_paper_plots(): # please implement properly
                     injr = dat['#41_injection_rate'] * t_turb / Mach**2
                     ekdr = dat['#42_ekin_diss_rate'] * t_turb / Mach**2
                     xlabel = r'$t/t_\mathrm{turb}$'
-                    ylim = [0, 1.5]
+                    ylim = [0, 1.4]
                     if mach == 0.2:
-                        ylabel = r'$\varepsilon_{\textrm{kin}}$ and $\varepsilon_{\textrm{inj}} / (\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\, t_{\textrm{turb}}^{-1})$'
+                        ylabel = r'$\varepsilon_\mathrm{kin}$ and $\varepsilon_\mathrm{inj}$\quad$[\langle\rho\rangle\,\mathcal{M}^2\,c_{\mathrm{s}}^2\,t_{\mathrm{turb}}^{-1}]$'
                     xpos, ypos, dx, length = 0.012, 0.84, 0.19, 1.4
                     lf = cfp.legend_formatter(pos=(xpos+isim*dx, ypos), length=length)
                     ret = cfp.plot(x=time, y=ekdr, label=r'$'+str(N)+'^3$', color=color[isim], linestyle=linestyle[isim], legend_formatter=lf)
                     if N==2048:
                         lf = cfp.legend_formatter(pos=(xpos+4*dx, ypos), length=length)
-                        cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\textrm{inj}}$', color='blue', legend_formatter=lf)
+                        cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\mathrm{inj}}$', color='blue', legend_formatter=lf)
                 if fig == 'Time_correlation':
                     if N==2048:
                         injr = dat['#41_injection_rate'] * t_turb / Mach**2
@@ -104,8 +104,8 @@ def make_paper_plots(): # please implement properly
                         tshifts = np.array(tshifts); L2s=np.array(L2s)
                         ret = cfp.plot(x=tshifts, y=L2s, color='black')
                         ylim = [0, 0.35]
-                        xlabel = r'$\Delta t/t_{\textrm{turb}}$'
-                        ylabel = r'$\ell^2$ norm of $\varepsilon_{\textrm{kin}}-\varepsilon_{\textrm{inj}}$'
+                        xlabel = r'$\Delta t/t_{\mathrm{turb}}$'
+                        ylabel = r'$\ell^2$ norm of $\varepsilon_{\mathrm{kin}}-\varepsilon_{\mathrm{inj}}$'
                         # print optimal time shift for max correlation
                         tshift_max_correlation = tshifts[L2s==L2s.min()]
                         print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation, color='yellow')
