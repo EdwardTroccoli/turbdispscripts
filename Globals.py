@@ -66,15 +66,19 @@ def compute_vort(overwrite=False):
 # computes spectra using C++ pdfs function
 def compute_spectra_file(filename, out_path='./', ncpu=8, overwrite=False):
     # Define expected output files
-    extensions = ["_spect_vels.dat", "_spect_dset_ekdr.dat"]
-    output_files = [filename.split('/')[-1]+"_spect_vels.dat", filename.split('/')[-1]+"_spect_dset_ekdr.dat"]
-    # Check if file exists
-    if not (os.path.exists(out_path+filename.split('/')[-1]+extensions[0]) and os.path.exists(out_path+filename.split('/')[-1]+extensions[1])) or overwrite:
-        # run the spectra command
-        cfp.run_shell_command(f'mpirun -np 64 spectra {filename} -types 0 1 7 -dsets ekdr')
+    extensions = ["_spect_vels.dat", "_spect_sqrtrho.dat", "_spect_dset_ekdr.dat"]
+    # Check if file(s) exist
+    call_spectra = False
+    for ext in extensions:
+        if not (os.path.exists(out_path+filename.split('/')[-1]+ext)) or overwrite:
+            call_spectra = True
+    if call_spectra:
+        cfp.run_shell_command('mpirun -np '+str(ncpu)+' spectra '+filename+' -types 0 1 7 -dsets ekdr')
         time.sleep(0.1)
         for ext in extensions:
             cfp.run_shell_command("mv "+filename+ext+" "+out_path)
+    else:
+        print('Spectra files for '+filename+'already present - skipping.', color='green')
 
 def compute_spectra(overwrite=False):
     for sim_path in sim_paths:
@@ -83,8 +87,11 @@ def compute_spectra(overwrite=False):
         else:
             ncpu = 8
         plot_files = sorted(glob.glob(sim_path+"Turb_hdf5_plt_cnt_0???"))
+        out_path = sim_path+'spect/'
+        if not os.path.isdir(out_path):
+            cfp.run_shell_command('mkdir '+out_path)
         for plot_file in plot_files:
-            compute_spectra_file(plot_file, ncpu=ncpu, overwrite=overwrite)
+            compute_spectra_file(plot_file, out_path=out_path, ncpu=ncpu, overwrite=overwrite)
 
 def clean_datfile(path, overwrite=False):
     print(f'Working on: {path}', color='green')
