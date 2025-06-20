@@ -15,8 +15,8 @@ if not os.path.isdir(fig_path):
     cfp.run_shell_command('mkdir '+fig_path)
 
 # sim_paths = ["N256M0p2HDRe2500", "N512M0p2HDRe2500", "N1024M0p2HDRe2500", "N256M5HDRe2500", "N512M5HDRe2500", "N1024M5HDRe2500"]
-#sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
-sim_paths = ["../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/"]
+sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
+#sim_paths = ["../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/"]
 
 def params(model_name):
     class ret:
@@ -71,7 +71,7 @@ def compute_spectra_file(filename, out_path='./', ncpu=8, overwrite=False):
     # Check if file exists
     if not (os.path.exists(out_path+filename.split('/')[-1]+extensions[0]) and os.path.exists(out_path+filename.split('/')[-1]+extensions[1])) or overwrite:
         # run the spectra command
-        cfp.run_shell_command(f'mpirun -np 64 spectra {filename} -types 0 1 -dsets ekdr')
+        cfp.run_shell_command(f'mpirun -np 64 spectra {filename} -types 0 1 7 -dsets ekdr')
         time.sleep(0.1)
         for ext in extensions:
             cfp.run_shell_command("mv "+filename+ext+" "+out_path)
