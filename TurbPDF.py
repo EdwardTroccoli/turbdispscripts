@@ -97,8 +97,6 @@ def compute_2d_pdf(filename, variables, bins, overwrite=False, norm=None):
     return ret
 
 def plot_2Dpdf(po, MachNum, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
-    if 'M0p2' in out_path: MachNum = '0p2'
-    if 'M5' in out_path: MachNum = '5'
     out_path = path + "PDFs/"
     save_output = out_path+'averaged_2Dpdf_' + var[1] + "_" + var[0] + "_" + "M" +MachNum +'.pdf'
     if not os.path.isdir(out_path):
@@ -108,7 +106,6 @@ def plot_2Dpdf(po, MachNum, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_y
         ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
     if po.variables[1] == "dens":
         xlabel = r"Density $\rho/(\langle\rho\rangle)$"
-        remove_x_ticks = True
     if po.variables[1] == "vorticity":
         xlabel = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
     if '0p2' == MachNum:
@@ -214,6 +211,8 @@ if __name__ == "__main__":
 
         N = params(path).N
         Mach = params(path).Mach
+        if 'M0p2' in path: MachNum = '0p2'
+        if 'M5' in path: MachNum = '5'
 
         print(f'\nWorking on: {path}', color='cyan')
 
