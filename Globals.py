@@ -14,9 +14,8 @@ fig_path = "../Figures/"
 if not os.path.isdir(fig_path):
     cfp.run_shell_command('mkdir '+fig_path)
 
-sim_paths = ["../N256M5HDRe2500/", "../N512M5HDRe2500/", "../N1024M5HDRe2500/"]
-#sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
-#sim_paths = ["../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/"]
+# sim_paths = ["../N256M5HDRe2500/", "../N512M5HDRe2500/", "../N1024M5HDRe2500/"]
+sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
 
 def params(model_name):
     class ret:
