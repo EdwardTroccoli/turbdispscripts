@@ -123,8 +123,9 @@ def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, N):
         for i, filen in enumerate(slices):
             if variable == "dens":
                 if '0p2' in out_path:
-                    vmin = 0.95
-                    vmax = 1.05
+                    log = False
+                    vmin = 0.90
+                    vmax = 1.1
                     ylabel = r'$y$'
                 elif '5' in out_path:
                     vmin = 1e-2
