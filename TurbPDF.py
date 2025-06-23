@@ -14,8 +14,6 @@ import glob
 import flashlib as fl
 from scipy.stats import binned_statistic_2d
 import dill
-import h5py
-from pathlib import Path
 import gc
 import matplotlib.pyplot as plt
 cfp.import_matplotlibrc(fontscale=0.8)
@@ -63,18 +61,19 @@ def plot_1d_pdf(pdf_dat):
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'], xlabel="Kinetic Energy", ylabel='PDF of Kinetic Energy', xlim=[1e-3,1e2],
                  yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlog=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
 
-
-def compute_2d_pdf(filename, variables, bins, overwrite=False, norm=None):
-    #fname_pkl = filename + "_2Dpdf_" + variables[0] + "_" + variables[1] + "_" + "M" +MachNumber[i] + ".pkl"
-    fname_pkl = out_path + f"{Path(filename).stem}_2Dpdf_{variables[1]}_{variables[0]}_M{Mach}.pkl"
+@cfp.timer_decorator
+def compute_2d_pdf(out_path, filename, variables, bins, norm=[1.0,1.0], overwrite=False):
+    fname_pkl = out_path+os.path.basename(filename)+"_2Dpdf_"+variables[0]+"_"+variables[1]+".pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         # read data
         gg = fl.FlashGG(filename)
-        print("reading x data...", color="red")
-        x = gg.ReadVar(dsets=variables)[1].flatten()*norm
-        print("reading y data...", color="red")
-        y = gg.ReadVar(dsets=variables)[0].flatten()*(t_turb[i]/Mach[i]**2)
-        print("computing binned_statistic_2d...", color="blue")
+        print("reading x and y data...", color="red")
+        dsets = variables.copy()
+        if dsets[0] == 'vort': dsets[0] = 'vorticity'
+        x, y = gg.ReadVar(dsets=dsets)
+        x = x.flatten()*norm[0]
+        y = y.flatten()*norm[1]
+        print("computing binned_statistic_2d...", color="cyan")
         counts_, x_edges_, y_edges_, binnum_ = binned_statistic_2d(x, y, np.ones_like(x, dtype=np.float32), statistic='count', bins=bins)
         del x; del y; del binnum_
         gc.collect()
@@ -90,46 +89,40 @@ def compute_2d_pdf(filename, variables, bins, overwrite=False, norm=None):
         # save the data to file
         with open(fname_pkl, "wb") as fobj:
             print("Writing '"+fname_pkl+"'", color="magenta")
-            dill.dump(ret, fobj, protocol = 4)
+            dill.dump(ret, fobj)
     else:
         print("Read '"+fname_pkl+"'", color="green")
         ret = dill.load(open(fname_pkl, "rb"))
     return ret
 
-def plot_2Dpdf(po, MachNum, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
-    out_path = path + "PDFs/"
-    save_output = out_path+'averaged_2Dpdf_' + var[1] + "_" + var[0] + "_" + "M" +MachNum +'.pdf'
-    if not os.path.isdir(out_path):
-        cfp.run_shell_command('mkdir '+out_path)
-    remove_x_ticks,remove_y_ticks=False,False
-    if po.variables[0] == "ekdr":
+def plot_2Dpdf(outfile, pdat, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
+    remove_x_ticks, remove_y_ticks = False, False
+    if pdat.variables[1] == "ekdr":
         ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
-    if po.variables[1] == "dens":
+    if pdat.variables[0] == "dens":
         xlabel = r"Density $\rho/(\langle\rho\rangle)$"
-    if po.variables[1] == "vorticity":
+        remove_x_ticks = True
+    if pdat.variables[0] == "vort":
         xlabel = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
-    if '0p2' == MachNum:
-        Mach = '0.2'
+    if '0p2' in outfile:
+        MachStr = '0.2'
         cmap_label = None
-    elif '5' ==  MachNum:
-        Mach = '5'
+    if '5' in outfile:
+        MachStr = '5'
         remove_y_ticks = True
         ylabel = None
         cmap_label = 'PDF'
-    ret = cfp.plot_map(po.pdf, xedges=po.x_edges, yedges=po.y_edges, xlabel=xlabel, ylabel=ylabel,
-                 log=True, xlog=True, ylog=True, cmap_label=cmap_label)
+    ret = cfp.plot_map(pdat.pdf, xedges=pdat.x_edges, yedges=pdat.y_edges, xlabel=xlabel, ylabel=ylabel,
+                       log=True, xlog=True, ylog=True, cmap_label=cmap_label)
+    cfp.plot(x=0.04, y=0.91, text=r"$\mathcal{M}="+MachStr+"$", normalised_coords=True) # Mach number label
     ax = ret.ax()[0]
-    ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes, fontsize=14, color='black', verticalalignment='top')
-    cfp.plot(ax=ret.ax()[0], normalised_coords=True)
-    if remove_x_ticks == True:
-        ax.set_xticklabels([])
-    if remove_y_ticks == True:
-        ax.set_yticklabels([])
+    if remove_x_ticks: ax.set_xticklabels([])
+    if remove_y_ticks: ax.set_yticklabels([])
     if do_fit or by_hand_fit is not None:
-        line_fitting(po, xlabel, ylabel, save_output, xlim=fit_xlim, ylim=fit_ylim, by_hand_fit=by_hand_fit)
+        line_fitting(pdat, xlabel, ylabel, outfile, xlim=fit_xlim, ylim=fit_ylim, by_hand_fit=by_hand_fit)
     else:
-        cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, normalised_coords=True, save=save_output)
-    cfp.run_shell_command(f'shellutils.py pdf_compress -i {save_output} -overwrite')
+        cfp.plot(ax=ax, xlabel=xlabel, ylabel=ylabel, normalised_coords=True, save=outfile)
+    cfp.run_shell_command('shellutils.py pdf_compress -i '+outfile+' -ov')
 
 
 def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_fit=None):
@@ -210,9 +203,10 @@ if __name__ == "__main__":
     for i, path in enumerate(sim_paths):
 
         N = params(path).N
+        t_turb = params(path).t_turb
         Mach = params(path).Mach
-        if 'M0p2' in path: MachNum = '0p2'
-        if 'M5' in path: MachNum = '5'
+        if Mach == 0.2: MachStr = '0p2'
+        if Mach == 5:   MachStr = '5'
 
         print(f'\nWorking on: {path}', color='cyan')
 
@@ -226,7 +220,7 @@ if __name__ == "__main__":
             # loop over simulation variables
             vars_1Dpdf = ["dens", "ekin", "injr", "ekdr"]
             for var in vars_1Dpdf:
-                pdf_aver_file = "aver_1DPDF_"+var+ "_" + "M" + MachNum + ".pdf_data"
+                pdf_aver_file = out_path+"aver_1DPDF_"+var+".pdf_data"
                 if args.overwrite:
                     for d in range(20, 101):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
@@ -239,60 +233,57 @@ if __name__ == "__main__":
                         pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data")
                         aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
                         write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
-
                 pdf_dat, pdf_header = read_pdf(pdf_aver_file) # read the PDF data
                 plot_1d_pdf(pdf_dat)
 
         # 2D PDFs
         if args.pdf2d:
             # variables for the 2d pdf plots, can add more.
-            vars_2Dpdf = [["ekdr", "dens"], ["ekdr", "vorticity"]]
+            vars_2Dpdf = [["dens", "ekdr"], ["vort", "ekdr"]]
+            norms = [[1.0, t_turb/Mach**2], [Mach/N, t_turb/Mach**2]]
             # loop over simulation variables
-            for var in vars_2Dpdf:
+            for ivar, var in enumerate(vars_2Dpdf):
                 # set defaults
-                norm = 1
                 do_fit = False
                 by_hand_fit = None
                 fit_xlim = None
                 fit_ylim = None
-                # set normalisation
-                if var[1] == "vorticity":
-                    norm = (1/N) / Mach
                 # set binning
-                if var[0] == "ekdr":
+                if var[1] == "ekdr":
                     bins_y = np.logspace(-8, 6, 250)
-                if var[1] == "dens":
+                if var[0] == "dens":
                     bins_x = np.logspace(-4, 3, 250)
-                    if 'M5' in path:
+                    if Mach == 5:
                         by_hand_fit = [1.5, -1.0] # exponent and normalisation of power-law line to draw
                         fit_xlim = [1e-2, 1e1]
-                if var[1] == "vorticity":
+                if var[0] == "vort":
                     bins_x = np.logspace(-6, 1, 250)
                     by_hand_fit = [2.0, 2.5] # exponent and normalisation of power-law line to draw
                     fit_xlim = [1e-2, 3e-1]
-                fname_pkl = out_path+"averaged_2Dpdf_" + var[1] + "_" + var[0] + "_" + "M" + MachNum + ".pkl"
+                fname_pkl = out_path+"aver_2Dpdf_"+var[0]+"_"+var[1]+".pkl"
                 if not os.path.isfile(fname_pkl) or args.overwrite:
                     pdf_data = []
-                    for d in range(20, 101, 1):
+                    for d in range(60, 61, 1):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-                        if "vorticity" in var:
-                            compute_vort(path+filename, overwrite=False)
-                        po = compute_2d_pdf(path+filename, var, bins=[bins_x,bins_y],overwrite = args.overwrite, norm=norm)
+                        if "vort" in var:
+                            compute_vort_file(path+filename, overwrite=False)
+                        po = compute_2d_pdf(out_path, path+filename, var, bins=[bins_x,bins_y], norm=norms[ivar], overwrite=args.overwrite)
                         pdf_data.append(po.pdf)
                     # setup a class to store edges and the averaged pdf data.
-                    class ret:
+                    class pdat:
                         pdf = np.mean(np.stack(pdf_data, axis=0), axis=0)
                         x_edges = po.x_edges
                         y_edges = po.y_edges
                         variables = var
                     with open(fname_pkl, "wb") as fobj:
                         print("Writing '"+fname_pkl+"'", color="magenta")
-                        dill.dump(ret, fobj)
+                        dill.dump(pdat, fobj)
                 else:
                     print("Read '"+fname_pkl+"'", color="green")
-                    ret = dill.load(open(fname_pkl, "rb"))
-                # Plot
-                plot_2Dpdf(ret, MachNum, do_fit=do_fit, by_hand_fit=by_hand_fit, fit_xlim=fit_xlim, fit_ylim=fit_ylim)
+                    pdat = dill.load(open(fname_pkl, "rb"))
+                # Plot 2D-PDF
+                outfile = fname_pkl[:-4]+'_M'+MachStr+'.pdf'
+                plot_2Dpdf(outfile, pdat, do_fit=do_fit, by_hand_fit=by_hand_fit, fit_xlim=fit_xlim, fit_ylim=fit_ylim)
 
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
