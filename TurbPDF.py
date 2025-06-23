@@ -15,6 +15,7 @@ import flashlib as fl
 from scipy.stats import binned_statistic_2d
 import dill
 import gc
+import copy
 import matplotlib.pyplot as plt
 cfp.import_matplotlibrc(fontscale=0.8)
 
@@ -68,7 +69,7 @@ def compute_2d_pdf(out_path, filename, variables, bins, norm=[1.0,1.0], overwrit
         # read data
         gg = fl.FlashGG(filename)
         print("reading x and y data...", color="red")
-        dsets = variables.copy()
+        dsets = copy.deepcopy(variables)
         if dsets[0] == 'vort': dsets[0] = 'vorticity'
         x, y = gg.ReadVar(dsets=dsets)
         x = x.flatten()*norm[0]
@@ -96,27 +97,25 @@ def compute_2d_pdf(out_path, filename, variables, bins, norm=[1.0,1.0], overwrit
     return ret
 
 def plot_2Dpdf(outfile, pdat, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
-    remove_x_ticks, remove_y_ticks = False, False
+    remove_y_ticks = False
     if pdat.variables[1] == "ekdr":
         ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
     if pdat.variables[0] == "dens":
         xlabel = r"Density $\rho/(\langle\rho\rangle)$"
-        remove_x_ticks = True
     if pdat.variables[0] == "vort":
         xlabel = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
-    if '0p2' in outfile:
+    if 'M0p2' in outfile:
         MachStr = '0.2'
         cmap_label = None
-    if '5' in outfile:
+    if 'M5' in outfile:
         MachStr = '5'
         remove_y_ticks = True
         ylabel = None
         cmap_label = 'PDF'
     ret = cfp.plot_map(pdat.pdf, xedges=pdat.x_edges, yedges=pdat.y_edges, xlabel=xlabel, ylabel=ylabel,
                        log=True, xlog=True, ylog=True, cmap_label=cmap_label)
-    cfp.plot(x=0.04, y=0.91, text=r"$\mathcal{M}="+MachStr+"$", normalised_coords=True) # Mach number label
     ax = ret.ax()[0]
-    if remove_x_ticks: ax.set_xticklabels([])
+    cfp.plot(x=0.04, y=0.91, ax=ax, text=r"$\mathcal{M}="+MachStr+"$", normalised_coords=True) # Mach number label
     if remove_y_ticks: ax.set_yticklabels([])
     if do_fit or by_hand_fit is not None:
         line_fitting(pdat, xlabel, ylabel, outfile, xlim=fit_xlim, ylim=fit_ylim, by_hand_fit=by_hand_fit)
@@ -240,7 +239,7 @@ if __name__ == "__main__":
         if args.pdf2d:
             # variables for the 2d pdf plots, can add more.
             vars_2Dpdf = [["dens", "ekdr"], ["vort", "ekdr"]]
-            norms = [[1.0, t_turb/Mach**2], [Mach/N, t_turb/Mach**2]]
+            norms = [[1.0, t_turb/Mach**2], [1.0/(Mach*N), t_turb/Mach**2]]
             # loop over simulation variables
             for ivar, var in enumerate(vars_2Dpdf):
                 # set defaults
