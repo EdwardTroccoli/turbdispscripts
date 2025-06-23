@@ -40,7 +40,7 @@ def plot_var(path, dat, variable):
     cfp.plot(xlabel=xlabel, ylabel=ylabel, save=out_path+"tevol_"+variable+".pdf", legend_loc='upper left')
 
 
-def make_paper_plots(): # please implement properly
+def make_paper_plots():
     # loop over figures
     figs = ["Time_evol_Mach", "Time_evol_injr_ekdr", "Time_correlation"]
     for fig in figs:
@@ -116,7 +116,6 @@ def make_paper_plots(): # please implement properly
                 ax.set_xticklabels([])
             # create final plot
             cfp.plot(xlabel=xlabel, ylabel=ylabel, ylim=ylim, save=fig_path+fig+"_M"+MachStr+".pdf")
-
 
 if __name__ == "__main__":
 
