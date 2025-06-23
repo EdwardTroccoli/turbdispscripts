@@ -14,8 +14,8 @@ fig_path = "../Figures/"
 if not os.path.isdir(fig_path):
     cfp.run_shell_command('mkdir '+fig_path)
 
-# sim_paths = ["N256M0p2HDRe2500", "N512M0p2HDRe2500", "N1024M0p2HDRe2500", "N256M5HDRe2500", "N512M5HDRe2500", "N1024M5HDRe2500"]
-sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
+sim_paths = ["../N256M5HDRe2500/", "../N512M5HDRe2500/", "../N1024M5HDRe2500/"]
+#sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
 #sim_paths = ["../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/"]
 
 def params(model_name):
@@ -57,6 +57,8 @@ def compute_vort(overwrite=False):
     for sim_path in sim_paths:
         if params(sim_path).N == 2048:
             ncpu = 512
+        elif params(sim_path).N == 1024:
+            ncpu = 64
         else:
             ncpu = 8
         plot_files = sorted(glob.glob(sim_path+"Turb_hdf5_plt_cnt_0???"))
@@ -84,10 +86,12 @@ def compute_spectra(overwrite=False):
     for sim_path in sim_paths:
         if params(sim_path).N == 2048:
             ncpu = 512
+        elif params(sim_path).N == 1024:
+            ncpu = 64
         else:
             ncpu = 8
         plot_files = sorted(glob.glob(sim_path+"Turb_hdf5_plt_cnt_0???"))
-        out_path = sim_path+'spect/'
+        out_path = sim_path+'spectra/'
         if not os.path.isdir(out_path):
             cfp.run_shell_command('mkdir '+out_path)
         for plot_file in plot_files:
