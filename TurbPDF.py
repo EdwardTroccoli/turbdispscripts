@@ -62,39 +62,57 @@ def plot_1d_pdf(pdf_dat):
         cfp.plot(x=pdf_dat['col1'], y=pdf_dat['col2'], xlabel="Kinetic Energy", ylabel='PDF of Kinetic Energy', xlim=[1e-3,1e2],
                  yerr=np.array([pdf_dat['col3'], pdf_dat['col3']]), shaded_err=True, xlog=True, ylog=True, save=out_path+'aver_1DPDF_'+var+'.pdf')
 
+
 @cfp.timer_decorator
 def compute_2d_pdf(out_path, filename, variables, bins, norm=[1.0,1.0], overwrite=False):
+    from tqdm import tqdm
+    from cfpack.mpi import MPI, comm, nPE, myPE
+    print("Total number of MPI ranks = "+str(nPE))
+    if MPI: comm.Barrier()
     fname_pkl = out_path+os.path.basename(filename)+"_2Dpdf_"+variables[0]+"_"+variables[1]+".pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         # read data
-        gg = fl.FlashGG(filename)
-        print("reading x and y data...", color="red")
+        gg = fl.FlashGG(filename, verbose=1)
+        print("reading x and y data and computing binned_statistic_2d...", color="red")
         dsets = copy.deepcopy(variables)
         if dsets[0] == 'vort': dsets[0] = 'vorticity'
-        x, y = gg.ReadVar(dsets=dsets)
-        x = x.flatten()*norm[0]
-        y = y.flatten()*norm[1]
-        print("computing binned_statistic_2d...", color="cyan")
-        counts_, x_edges_, y_edges_, binnum_ = binned_statistic_2d(x, y, np.ones_like(x, dtype=np.float32), statistic='count', bins=bins)
-        del x; del y; del binnum_
-        gc.collect()
-        class ret:
-            # compute 2D counts
-            counts, x_edges, y_edges, = counts_, x_edges_, y_edges_
-            # compute bin areas for normalization
-            dx = np.diff(x_edges)[0]  # bin width in x
-            dy = np.diff(y_edges)[0]  # bin width in y
-            bin_area = dx * dy
-            # normalize to get PDF (probability density)
-            pdf = counts / (np.sum(counts) * bin_area)  # ensures sum(pdf * bin_area) = 1
-        # save the data to file
-        with open(fname_pkl, "wb") as fobj:
-            print("Writing '"+fname_pkl+"'", color="magenta")
-            dill.dump(ret, fobj)
-    else:
-        print("Read '"+fname_pkl+"'", color="green")
-        ret = dill.load(open(fname_pkl, "rb"))
+        MyBlocks = gg.GetMyBlocks(myPE, nPE) # domain decomposition
+        counts_loc = []
+        for b in tqdm(MyBlocks, disable=(myPE!=0), desc=f"[{myPE}]"): # loop over local list of block for the MPI rank
+            x, y = gg.ReadBlockVar(b, dsets=dsets)
+            x = x.flatten()*norm[0]
+            y = y.flatten()*norm[1]
+            counts_, x_edges_, y_edges_, binnum_ = binned_statistic_2d(x, y, np.ones_like(x, dtype=np.float32), statistic='count', bins=bins)
+            counts_loc.append(counts_)
+            del x; del y; del binnum_; del counts_
+            gc.collect()
+        # MPI reduction operation
+        counts_loc = np.sum(np.array(counts_loc), axis=0)
+        if MPI:
+            counts_all = np.zeros(np.shape(counts_loc))
+            comm.Reduce(counts_loc, counts_all, op=MPI.SUM) # master gets total sum
+        else:
+            counts_all = counts_loc
+        if myPE == 0: # only the master PE writes
+            class ret:
+                # compute 2D counts
+                counts, x_edges, y_edges, = counts_all, x_edges_, y_edges_
+                # compute bin areas for normalization
+                dx = np.diff(x_edges)[0]  # bin width in x
+                dy = np.diff(y_edges)[0]  # bin width in y
+                bin_area = dx * dy
+                # normalize to get PDF (probability density)
+                pdf = counts / (np.sum(counts) * bin_area)  # ensures sum(pdf * bin_area) = 1
+            # save the data to file
+            with open(fname_pkl, "wb") as fobj:
+                print("Writing '"+fname_pkl+"'", color="magenta")
+                dill.dump(ret, fobj)
+    # read from file
+    if MPI: comm.Barrier()
+    print("Read '"+fname_pkl+"'", color="green")
+    ret = dill.load(open(fname_pkl, "rb"))
     return ret
+
 
 def plot_2Dpdf(outfile, pdat, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
     remove_y_ticks = False
@@ -186,6 +204,9 @@ def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_
 
 
 if __name__ == "__main__":
+
+    compute_2d_pdf("../N256M0p2HDRe2500/PDFs/", "../N256M0p2HDRe2500/Turb_hdf5_plt_cnt_0060", variables=["dens","ekdr"], bins=[np.logspace(-4,3,250),np.logspace(-8,6,250)], norm=[1.0,1.0], overwrite=True)
+    exit()
 
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Create and plot PDFs of different variables from FLASH simulation data.")
