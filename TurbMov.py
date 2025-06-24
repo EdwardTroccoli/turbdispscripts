@@ -121,11 +121,12 @@ def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, N):
                     plot_frame(var, log, cmap_label, cmap, vmin, vmax, remove_x_ticks, remove_y_ticks, xlabel, ylabel, out_file)
             return
         for i, filen in enumerate(slices):
+            log = True
             if variable == "dens":
                 if '0p2' in out_path:
                     log = False
-                    vmin = 0.90
-                    vmax = 1.1
+                    vmin = 0.94
+                    vmax = 1.06
                     ylabel = r'$y$'
                 elif '5' in out_path:
                     vmin = 1e-2
