@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# written by Edward Troccoli, 2025
+# written by Edward Troccoli & Christoph Federrath, 2025
 
 import argparse
 import numpy as np
@@ -42,19 +42,21 @@ def plot_var(path, dat, variable):
 
 def make_paper_plots():
     # loop over figures
-    figs = ["Time_evol_Mach", "Time_evol_injr_ekdr", "Time_correlation"]
+    figs = ["Time_evol_injr_ekdr", "Time_correlation", "Time_evol_Mach"]
     for fig in figs:
         # loop over Mach numbers
         machs = [0.2, 5]
         for mach in machs:
             if mach == 0.2:
-                sims = ["N256M0p2HDRe2500", "N512M0p2HDRe2500", "N1024M0p2HDRe2500", "N2048M0p2HDRe2500HP"]
+                sims = ["N2048M0p2HDRe2500HP", "N1024M0p2HDRe2500", "N512M0p2HDRe2500", "N256M0p2HDRe2500"]
                 MachStr = '0p2'
+                MachSim = 'Sub'
             if mach == 5:
-                sims = ["N256M5HDRe2500", "N512M5HDRe2500", "N1024M5HDRe2500", "N2048M5HDRe2500HP"]
+                sims = ["N2048M5HDRe2500HP", "N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
                 MachStr = '5'
-            color = ['grey', 'green', 'magenta', 'black']
-            linestyle = ['dotted', 'dashdot', 'dashed', 'solid']
+                MachSim = 'Sup'
+            color = ['black', 'magenta', 'green', 'grey']
+            linestyle = ['solid', 'dashed', 'dashdot', 'dotted']
             # loop over simulations
             for isim, sim in enumerate(sims):
                 # get sim parameters
@@ -72,7 +74,7 @@ def make_paper_plots():
                     ylabel = r'$\mathcal{M}$'
                     remove_x_ticks = True
                     if Mach == 0.2: ylim = [0, 0.25]
-                    if Mach == 5: ylim = [0, 6.5]
+                    if Mach == 5: ylim = [0, 6]
                     ret = cfp.plot(x=time, y=dat['#14_rms_velocity'], color=color[isim], linestyle=linestyle[isim])
                 if fig == 'Time_evol_injr_ekdr':
                     injr = dat['#41_injection_rate'] * t_turb / Mach**2
@@ -81,12 +83,14 @@ def make_paper_plots():
                     ylim = [0, 1.4]
                     if mach == 0.2:
                         ylabel = r'$\varepsilon_\mathrm{kin}$ and $\varepsilon_\mathrm{inj}$\quad$[\langle\rho\rangle\,\mathcal{M}^2\,c_{\mathrm{s}}^2\,t_{\mathrm{turb}}^{-1}]$'
-                    xpos, ypos, dx, length = 0.012, 0.84, 0.19, 1.4
+                    xpos, ypos, dx, length = 0.072, 0.91, 0.21, 1.4
                     lf = cfp.legend_formatter(pos=(xpos+isim*dx, ypos), length=length)
-                    ret = cfp.plot(x=time, y=ekdr, label=r'$'+str(N)+'^3$', color=color[isim], linestyle=linestyle[isim], legend_formatter=lf)
+                    ret = cfp.plot(x=time, y=ekdr, label=MachSim+str(N), color=color[isim], linestyle=linestyle[isim], legend_formatter=lf)
                     if N==2048:
-                        lf = cfp.legend_formatter(pos=(xpos+4*dx, ypos), length=length)
-                        cfp.plot(x=time, y=injr, label=r'$\varepsilon_{\mathrm{inj}}$', color='blue', legend_formatter=lf)
+                        lf = cfp.legend_formatter(pos=(xpos, ypos-0.1), length=length)
+                        cfp.plot(x=time, y=injr, label = MachSim+str(N), color='blue', legend_formatter=lf)#label=r'$\varepsilon_{\mathrm{inj}}$'
+                        cfp.plot(x=0.022, y=ypos-0.1, text=r"$\varepsilon_{\mathrm{inj}}$:", normalised_coords=True)
+                        cfp.plot(x=0.022, y=ypos, text=r"$\varepsilon_{\mathrm{kin}}$:", normalised_coords=True)
                 if fig == 'Time_correlation':
                     if N==2048:
                         injr = dat['#41_injection_rate'] * t_turb / Mach**2
@@ -110,7 +114,7 @@ def make_paper_plots():
                         tshift_max_correlation = tshifts[L2s==L2s.min()]
                         print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation, color='yellow')
             # add Mach label
-            cfp.plot(x=0.04, y=0.91, text=rf"$\mathcal{{M}} = {mach}$", normalised_coords=True)
+            #cfp.plot(x=0.04, y=0.91, text=rf"$\mathcal{{M}} = {mach}$", normalised_coords=True)
             if remove_x_ticks:
                 ax = ret.ax()
                 ax.set_xticklabels([])
