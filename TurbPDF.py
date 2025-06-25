@@ -140,7 +140,6 @@ def plot_2Dpdf(outfile, pdat, do_fit=False, by_hand_fit=None, fit_xlim=None, fit
         line_fitting(pdat, xlabel, ylabel, outfile, xlim=fit_xlim, ylim=fit_ylim, by_hand_fit=by_hand_fit)
     else:
         cfp.plot(ax=ax, xlabel=xlabel, ylabel=ylabel, normalised_coords=True, save=outfile)
-    cfp.run_shell_command('shellutils.py pdf_compress -i '+outfile+' -ov')
 
 
 def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_fit=None):
@@ -206,8 +205,6 @@ def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_
 
 
 if __name__ == "__main__":
-
-    #compute_2d_pdf("../N256M0p2HDRe2500/PDFs/", "../N256M0p2HDRe2500/Turb_hdf5_plt_cnt_0060", variables=["dens","ekdr"], bins=[np.logspace(-4,3,250),np.logspace(-8,6,250)], norm=[1.0,1.0], overwrite=True)
 
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Create and plot PDFs of different variables from FLASH simulation data.")
@@ -305,8 +302,7 @@ if __name__ == "__main__":
                 # Plot 2D-PDF
                 outfile = fname_pkl[:-4]+'_M'+MachStr+'.pdf'
                 if myPE == 0: plot_2Dpdf(outfile, pdat, do_fit=do_fit, by_hand_fit=by_hand_fit, fit_xlim=fit_xlim, fit_ylim=fit_ylim)
-    # cleanup
-    if MPI: MPI.Finalize()
+
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
     print("Processing time: {:.2f}s".format(stop_time - start_time))
