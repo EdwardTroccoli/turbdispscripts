@@ -18,6 +18,8 @@ import gc
 import copy
 import matplotlib.pyplot as plt
 cfp.import_matplotlibrc(fontscale=0.8)
+from tqdm import tqdm
+from cfpack.mpi import MPI, comm, nPE, myPE
 
 # computes 1d_pdfs using C++ pdfs function
 def compute_1d_pdf(filename, variable):
@@ -65,15 +67,13 @@ def plot_1d_pdf(pdf_dat):
 
 @cfp.timer_decorator
 def compute_2d_pdf(out_path, filename, variables, bins, norm=[1.0,1.0], overwrite=False):
-    from tqdm import tqdm
-    from cfpack.mpi import MPI, comm, nPE, myPE
     print("Total number of MPI ranks = "+str(nPE))
     if MPI: comm.Barrier()
     fname_pkl = out_path+os.path.basename(filename)+"_2Dpdf_"+variables[0]+"_"+variables[1]+".pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         # read data
         gg = fl.FlashGG(filename, verbose=1)
-        print("reading x and y data and computing binned_statistic_2d...", color="red")
+        print("reading x and y data and computing binned_statistic_2d for vars", variables, "...", color="red")
         dsets = copy.deepcopy(variables)
         if dsets[0] == 'vort': dsets[0] = 'vorticity'
         MyBlocks = gg.GetMyBlocks(myPE, nPE) # domain decomposition
@@ -115,6 +115,7 @@ def compute_2d_pdf(out_path, filename, variables, bins, norm=[1.0,1.0], overwrit
 
 
 def plot_2Dpdf(outfile, pdat, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
+    if myPE != 0: return # only the master PE plots
     remove_y_ticks = False
     if pdat.variables[1] == "ekdr":
         ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
@@ -143,6 +144,7 @@ def plot_2Dpdf(outfile, pdat, do_fit=False, by_hand_fit=None, fit_xlim=None, fit
 
 
 def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_fit=None):
+    if myPE != 0: return # only the master PE plots
     # compute bin centres (take care of symlog as well)
     # --- x ---
     ineg = po.x_edges <= 0
@@ -205,8 +207,7 @@ def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_
 
 if __name__ == "__main__":
 
-    compute_2d_pdf("../N256M0p2HDRe2500/PDFs/", "../N256M0p2HDRe2500/Turb_hdf5_plt_cnt_0060", variables=["dens","ekdr"], bins=[np.logspace(-4,3,250),np.logspace(-8,6,250)], norm=[1.0,1.0], overwrite=True)
-    exit()
+    #compute_2d_pdf("../N256M0p2HDRe2500/PDFs/", "../N256M0p2HDRe2500/Turb_hdf5_plt_cnt_0060", variables=["dens","ekdr"], bins=[np.logspace(-4,3,250),np.logspace(-8,6,250)], norm=[1.0,1.0], overwrite=True)
 
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Create and plot PDFs of different variables from FLASH simulation data.")
@@ -233,7 +234,7 @@ if __name__ == "__main__":
         # creates the file output dir
         out_path = path + "PDFs/"
         if not os.path.isdir(out_path):
-            cfp.run_shell_command('mkdir '+out_path)
+            if myPE == 0: cfp.run_shell_command('mkdir '+out_path)
 
         # 1D PDFs
         if args.pdf1d:
@@ -248,11 +249,11 @@ if __name__ == "__main__":
                     if vars_1Dpdf in ['emag', 'ekin']:
                         pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data_log")
                         aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
-                        write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
+                        if myPE == 0: write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
                     elif vars_1Dpdf in ["injr", "ekdr", "emdr", "dens"]: 
                         pdf_files = glob.glob(path+"Turb_hdf5_plt_cnt_????_"+var+".pdf_data")
                         aver_dat, header_aver = aver_pdf(pdf_files) # average the PDFs
-                        write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
+                        if myPE == 0: write_pdf(pdf_aver_file, aver_dat, header_aver) # write averaged PDF
                 pdf_dat, pdf_header = read_pdf(pdf_aver_file) # read the PDF data
                 plot_1d_pdf(pdf_dat)
 
@@ -285,8 +286,8 @@ if __name__ == "__main__":
                     pdf_data = []
                     for d in range(60, 61, 1):
                         filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-                        if "vort" in var:
-                            compute_vort_file(path+filename, overwrite=False)
+                        # if "vort" in var: # with the new MPI implementation, we need to make sure to do this from Globals beforehand, not here
+                            # compute_vort_file(path+filename, overwrite=False)
                         po = compute_2d_pdf(out_path, path+filename, var, bins=[bins_x,bins_y], norm=norms[ivar], overwrite=args.overwrite)
                         pdf_data.append(po.pdf)
                     # setup a class to store edges and the averaged pdf data.
@@ -297,14 +298,15 @@ if __name__ == "__main__":
                         variables = var
                     with open(fname_pkl, "wb") as fobj:
                         print("Writing '"+fname_pkl+"'", color="magenta")
-                        dill.dump(pdat, fobj)
+                        if myPE == 0: dill.dump(pdat, fobj)
                 else:
                     print("Read '"+fname_pkl+"'", color="green")
                     pdat = dill.load(open(fname_pkl, "rb"))
                 # Plot 2D-PDF
                 outfile = fname_pkl[:-4]+'_M'+MachStr+'.pdf'
-                plot_2Dpdf(outfile, pdat, do_fit=do_fit, by_hand_fit=by_hand_fit, fit_xlim=fit_xlim, fit_ylim=fit_ylim)
-
+                if myPE == 0: plot_2Dpdf(outfile, pdat, do_fit=do_fit, by_hand_fit=by_hand_fit, fit_xlim=fit_xlim, fit_ylim=fit_ylim)
+    # cleanup
+    if MPI: MPI.Finalize()
     # End timing and output the total processing time
     stop_time = timeit.default_timer()
     print("Processing time: {:.2f}s".format(stop_time - start_time))
