@@ -89,8 +89,8 @@ def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwri
     ret = dill.load(open(fname_pkl, "rb"))
     return ret
 
-# computes or reads (if file already exists) all 2D PDFs for sim_path
-def get_2d_pdf(sim_path, overwrite=False):
+# computes or reads (if file already exists) 2D PDF for variables 'vars' in simulation 'path'
+def get_2d_pdf(path, vars, overwrite=False):
     # helper function to get normalisations
     def get_2Dpdf_norms(model_name, vars):
         norm_ekdr = params(model_name).t_turb / params(model_name).Mach**2
@@ -102,38 +102,36 @@ def get_2d_pdf(sim_path, overwrite=False):
             norms = [norm_vort, norm_ekdr]
         return norms
     # get 2D PDF
-    print(f'\nComputing 2D-PDF for: {sim_path}', color='cyan')
+    print(f'\nComputing 2D-PDF for: {path}', color='cyan')
     # create file output dir
-    out_path = sim_path + "PDFs/"
+    out_path = path + "PDFs/"
     if not os.path.isdir(out_path):
         if myPE == 0: cfp.run_shell_command('mkdir '+out_path)
-    # loop over 2D PDF variables
-    for vars in vars_2Dpdf:
-        # set binning
-        if vars[1] == "ekdr": bins_y = np.logspace(-8, 6, 250)
-        if vars[0] == "dens": bins_x = np.logspace(-4, 3, 250)
-        if vars[0] == "vort": bins_x = np.logspace(-6, 1, 250)
-        norms = get_2Dpdf_norms(path, vars)
-        fname_pkl = out_path+"aver_2Dpdf_"+vars[0]+"_"+vars[1]+".pkl"
-        if not os.path.isfile(fname_pkl) or overwrite:
-            pdf_data = []
-            for d in range(20, 101, 1):
-                filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-                po = compute_2d_pdf_file(out_path, sim_path+filename, vars, bins=[bins_x,bins_y], norms=norms, overwrite=overwrite)
-                pdf_data.append(po.pdf)
-            # setup a class to store edges and the averaged pdf data.
-            class pdat:
-                pdf = np.mean(np.stack(pdf_data, axis=0), axis=0)
-                x_edges = po.x_edges
-                y_edges = po.y_edges
-                variables = vars
-            if myPE == 0:
-                with open(fname_pkl, "wb") as fobj:
-                    print("Writing '"+fname_pkl+"'", color="magenta")
-                    dill.dump(pdat, fobj) # only the master rank writes to disk
-        else:
-            print("Read '"+fname_pkl+"'", color="green")
-            pdat = dill.load(open(fname_pkl, "rb"))
+    # set binning
+    if vars[1] == "ekdr": bins_y = np.logspace(-8, 6, 250)
+    if vars[0] == "dens": bins_x = np.logspace(-4, 3, 250)
+    if vars[0] == "vort": bins_x = np.logspace(-6, 1, 250)
+    norms = get_2Dpdf_norms(path, vars)
+    fname_pkl = out_path+"aver_2Dpdf_"+vars[0]+"_"+vars[1]+".pkl"
+    if not os.path.isfile(fname_pkl) or overwrite:
+        pdf_data = []
+        for d in range(20, 101, 1):
+            filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
+            po = compute_2d_pdf_file(out_path, path+filename, vars, bins=[bins_x,bins_y], norms=norms, overwrite=overwrite)
+            pdf_data.append(po.pdf)
+        # setup a class to store edges and the averaged pdf data.
+        class pdat:
+            pdf = np.mean(np.stack(pdf_data, axis=0), axis=0)
+            x_edges = po.x_edges
+            y_edges = po.y_edges
+            variables = vars
+        if myPE == 0:
+            with open(fname_pkl, "wb") as fobj:
+                print("Writing '"+fname_pkl+"'", color="magenta")
+                dill.dump(pdat, fobj) # only the master rank writes to disk
+    else:
+        print("Read '"+fname_pkl+"'", color="green")
+        pdat = dill.load(open(fname_pkl, "rb"))
     # return averaged 2D PDF
     return pdat
 
@@ -233,7 +231,8 @@ if __name__ == "__main__":
 
     if args.compute_2dpdfs:
         for path in sim_paths:
-            get_2d_pdf(path, overwrite=args.overwrite)
+            for vars in vars_2Dpdf: # loop over 2D PDF variables
+                get_2d_pdf(path, vars, overwrite=args.overwrite)
 
     if args.compute_spectra:
         compute_spectra(overwrite=args.overwrite)
