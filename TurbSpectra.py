@@ -43,48 +43,79 @@ def plot_spectra(dat, var, Mach,save=False):
 def make_paper_plots():
     # loop over figures
     vars = ["sqrtrho", "ekdr", "vels"]
-    for var in vars:
+    for ivar, var in enumerate(vars):
         # loop over Mach numbers
         machs = [0.2, 5]
-        for mach in machs:
+        for imach, mach in enumerate(machs):
             if mach == 0.2:
-                sims = ["N256M0p2HDRe2500", "N512M0p2HDRe2500", "N1024M0p2HDRe2500", "N2048M0p2HDRe2500HP"]
+                sims = ["N2048M0p2HDRe2500HP", "N1024M0p2HDRe2500", "N512M0p2HDRe2500", "N256M0p2HDRe2500"]
                 MachNum = '0p2'
+                MachSim = 'Sub'
+                compensation = '5/3'
             if mach == 5:
-                sims = ["N256M5HDRe2500", "N512M5HDRe2500", "N1024M5HDRe2500", "N2048M5HDRe2500HP"]
+                sims = ["N2048M5HDRe2500HP", "N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
                 MachNum = '5'
-            color = ['grey', 'green', 'magenta', 'black']
-            linestyle = ['dotted', 'dashdot', 'dashed', 'solid']
+                MachSim = 'Sup'
+                compensation = '2'   
+            color = ['black', 'magenta', 'green', 'grey']
+            linestyle = ['solid', 'dashed', 'dashdot', 'dotted']
+            dx = [0, 0.215, 0.215, 0.21]
             # loop over simulations
             for isim, sim in enumerate(sims):
                 # get sim parameters
                 N = params(sim).N
                 Mach = params(sim).Mach
+                t_turb = params(sim).t_turb
+                if var == 'vels': 
+                    spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_vels.dat"))
+                    norm = 1
+                    ylabel = r'$P_{\mathcal{M}}(k)\,k^{'+compensation+'}$'
+                if var == 'ekdr': 
+                    spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_dset_ekdr.dat"))
+                    norm = t_turb/Mach**2
+                    ylabel = r'$P_{\varepsilon_\mathrm{kin}}(k)$'
+                if var == 'sqrtrho': 
+                    spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_sqrtrho.dat"))
+                    norm = 1.0/(Mach*N)
+                    ylabel = r'$P_{\rho^{1/2}v}(k)\,k^{'+compensation+'}$'
                 # read data
                 dat = "../"+sim+"/spectra/aver_spectra_"+var+"_M"+MachNum+".dat"
                 if not os.path.isfile(dat):
-                    if var == 'vels': spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_vels.dat"))
-                    if var == 'ekdr': spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_dset_ekdr.dat"))
-                    if var == 'sqrtrho': spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_sqrtrho.dat"))
                     aver_dat, header_aver = aver_spect(spectra_files) # average the spectras
                     write_spect(dat, aver_dat, header_aver) # write averaged spectra
                 spectra_dat, spectra_header = read_spect(dat) 
                 # plot
-                
-                xpos, ypos, dx, length = 0.012, 0.84, 0.19, 1.4
-                lf = cfp.legend_formatter(pos=(xpos+isim*dx, ypos), length=length)
-                y = 10**spectra_dat['col6']
-                sigylo = y - 10**(spectra_dat['col6']-spectra_dat['col7'])
-                sigyup = 10**(spectra_dat['col6']+spectra_dat['col7']) - y
-                ret = cfp.plot(x=spectra_dat['col1'], y=y, label=r'$'+str(N)+'^3$',yerr=[sigylo, sigyup],
-                shaded_err=True, color=color[isim], linestyle=linestyle[isim], legend_formatter=lf)
+                xpos, ypos, length = 0.012, 0.1, 1.4
+                lf = cfp.legend_formatter(pos=(xpos+isim*dx[isim], ypos), length=length)
+                ylim = None
+                if var in ['vels','sqrtrho']: 
+                    compensation_factor = spectra_dat['col1']**eval(compensation)
+                    xlabel = None
+                    remove_x_ticks = True
+                    legend_formatter = None
+                    label = None
+                    if Mach == 0.2: 
+                        ylim = [1e-10,1e-1]
+                if var == 'ekdr': 
+                    remove_x_ticks = False
+                    compensation_factor = 1
+                    xlabel = r'Wavenumber $k$'
+                    legend_formatter = lf
+                    label=MachSim+str(N)
+                    if Mach == 0.2: 
+                        ylim = [1e-7,1e-1]
+                y = 10**spectra_dat['col6']*norm*compensation_factor
+                sigylo = y - 10**(spectra_dat['col6']-spectra_dat['col7'])*norm*compensation_factor
+                sigyup = 10**(spectra_dat['col6']+spectra_dat['col7'])*norm*compensation_factor - y
+                ret = cfp.plot(x=spectra_dat['col1'], y=y, label=label,
+                color=color[isim], linestyle=linestyle[isim], legend_formatter=legend_formatter,yerr=[sigylo, sigyup],shaded_err=[0.2,color[isim]])
             # add Mach label
-            cfp.plot(x=0.75, y=0.95, text=rf"$\mathcal{{M}} = {mach}$", normalised_coords=True)
-            #if remove_x_ticks:
-             #   ax = ret.ax()
-              #  ax.set_xticklabels([])
-            # create final plot
-            cfp.plot(xlabel=r'Wavenumber $k$', xlog=True, ylog=True, save=fig_path+var+"_M"+MachNum+".pdf")
+            #cfp.plot(x=0.75, y=0.95, text=rf"$\mathcal{{M}} = {mach}$", normalised_coords=True)
+            #create final plot
+            if remove_x_ticks == True:
+                    ax = ret.ax()
+                    ax.set_xticklabels([])
+            cfp.plot(xlabel=xlabel, ylabel=ylabel, xlog=True, ylim=ylim, ylog=True, save=fig_path+"spectra_"+var+"_M"+MachNum+".pdf")
 
 
 if __name__ == "__main__":
