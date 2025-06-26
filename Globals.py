@@ -127,9 +127,10 @@ def get_2d_pdf(sim_path, overwrite=False):
                 x_edges = po.x_edges
                 y_edges = po.y_edges
                 variables = vars
-            with open(fname_pkl, "wb") as fobj:
-                print("Writing '"+fname_pkl+"'", color="magenta")
-                if myPE == 0: dill.dump(pdat, fobj) # only the master rank writes to disk
+            if myPE == 0:
+                with open(fname_pkl, "wb") as fobj:
+                    print("Writing '"+fname_pkl+"'", color="magenta")
+                    dill.dump(pdat, fobj) # only the master rank writes to disk
         else:
             print("Read '"+fname_pkl+"'", color="green")
             pdat = dill.load(open(fname_pkl, "rb"))
