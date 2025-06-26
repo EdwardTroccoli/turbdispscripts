@@ -57,6 +57,7 @@ def make_paper_plots():
                 MachSim = 'Sup'
             color = ['black', 'magenta', 'green', 'grey']
             linestyle = ['solid', 'dashed', 'dashdot', 'dotted']
+            dx = [0,0.225,0.225,0.22]
             # loop over simulations
             for isim, sim in enumerate(sims):
                 # get sim parameters
@@ -83,8 +84,8 @@ def make_paper_plots():
                     ylim = [0, 1.4]
                     if mach == 0.2:
                         ylabel = r'$\varepsilon_\mathrm{kin}$ and $\varepsilon_\mathrm{inj}$\quad$[\langle\rho\rangle\,\mathcal{M}^2\,c_{\mathrm{s}}^2\,t_{\mathrm{turb}}^{-1}]$'
-                    xpos, ypos, dx, length = 0.072, 0.91, 0.21, 1.4
-                    lf = cfp.legend_formatter(pos=(xpos+isim*dx, ypos), length=length)
+                    xpos, ypos, length = 0.072, 0.91, 1.4
+                    lf = cfp.legend_formatter(pos=(xpos+isim*dx[isim], ypos), length=length)
                     ret = cfp.plot(x=time, y=ekdr, label=MachSim+str(N), color=color[isim], linestyle=linestyle[isim], legend_formatter=lf)
                     if N==2048:
                         lf = cfp.legend_formatter(pos=(xpos, ypos-0.1), length=length)
