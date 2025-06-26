@@ -50,7 +50,7 @@ def plot_variable(slices, plot_files, out_path, variable, t_turb, Mach, N):
         cmap_label = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
         for i, filen in enumerate(plot_files):
                 #call vorticity computer from Globals to make the slice files
-                compute_vort(filen, overwrite=False)
+                compute_vort(overwrite=False)
                 #need to construct the filenames appropiately as they are stored in the movie_files directory
                 vortx = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_x_slice_z.h5')
                 vorty = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_y_slice_z.h5')
@@ -109,7 +109,7 @@ def make_paper_plots(slices, plot_files, out_path, t_turb, Mach, N):
         if variable == "vort":
             cmap_label = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
             for i, filen in enumerate(plot_files):
-                    compute_vort(filen,overwrite=False)
+                    compute_vort(overwrite=False)
                     vortx = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_x_slice_z.h5')
                     vorty = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_y_slice_z.h5')
                     vortz = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_z_slice_z.h5')
@@ -180,7 +180,6 @@ if __name__ == "__main__":
         #files = sorted(glob.glob(out_path+"Turb_slice_xy_*"))
         slices = sorted(glob.glob(out_path+"Turb_slice_xy_000250"))
         plot_files = sorted(glob.glob(path+"Turb_hdf5_plt_cnt_0050"))
-
         if args.paper_plots == False:
             for var in args.variable:
                 # call plot function
