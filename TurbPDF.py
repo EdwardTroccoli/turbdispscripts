@@ -196,7 +196,7 @@ if __name__ == "__main__":
         # 2D PDFs
         if args.pdf2d:
             # loop over 2D PDF variables
-            for ivars, vars in enumerate(vars_2Dpdf):
+            for vars in vars_2Dpdf:
                 # set defaults
                 do_fit = False
                 by_hand_fit = None
@@ -208,7 +208,7 @@ if __name__ == "__main__":
                 if vars[0] == "vort":
                     by_hand_fit = [2.0, 2.5] # exponent and normalisation of power-law line to draw
                     fit_xlim = [1e-2, 3e-1]
-                pdat = get_2d_pdf(path)
+                pdat = get_2d_pdf(path, vars)
                 # Plot 2D-PDF
                 outfile = out_path+"aver_2Dpdf_"+vars[0]+"_"+vars[1]+'_M'+MachStr+'.pdf'
                 plot_2Dpdf(outfile, pdat, do_fit=do_fit, by_hand_fit=by_hand_fit, fit_xlim=fit_xlim, fit_ylim=fit_ylim)
