@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # written by Edward Troccoli & Christoph Federrath, 2025
 
-from cfpack.defaults import *
 import cfpack as cfp
 import h5py
 import os, time
@@ -15,11 +14,11 @@ import flashlib as fl
 import gc, copy
 from tqdm import tqdm
 from cfpack.mpi import MPI, comm, nPE, myPE
+from cfpack.defaults import *
 
 # === define simulations to work on ===
 # sim_paths = ["../N256M5HDRe2500/", "../N512M5HDRe2500/", "../N1024M5HDRe2500/"]
-# sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
-sim_paths = ["../N256M0p2HDRe2500/"]
+sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
 # =====================================
 
 # create figure output path
@@ -118,7 +117,7 @@ def get_2d_pdf(sim_path, overwrite=False):
         fname_pkl = out_path+"aver_2Dpdf_"+vars[0]+"_"+vars[1]+".pkl"
         if not os.path.isfile(fname_pkl) or overwrite:
             pdf_data = []
-            for d in range(60, 61, 1):
+            for d in range(20, 101, 1):
                 filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
                 po = compute_2d_pdf_file(out_path, sim_path+filename, vars, bins=[bins_x,bins_y], norms=norms, overwrite=overwrite)
                 pdf_data.append(po.pdf)
