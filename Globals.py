@@ -15,10 +15,11 @@ import gc, copy
 from tqdm import tqdm
 from cfpack.mpi import MPI, comm, nPE, myPE
 from cfpack.defaults import *
+import cfpack as cfp
 
 # === define simulations to work on ===
 # sim_paths = ["../N256M5HDRe2500/", "../N512M5HDRe2500/", "../N1024M5HDRe2500/"]
-sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
+sim_paths = ["../N1024M0p2HDRe2500HP/", "../N1024M5HDRe2500HP/"]
 # =====================================
 
 # create figure output path
@@ -40,6 +41,13 @@ def params(model_name):
 
 # global 2D-PDF settings
 vars_2Dpdf = [["dens", "ekdr"], ["vort", "ekdr"]]
+
+# host settings
+hostname = cfp.get_hostname()
+if hostname.find("gadi") != -1 or hostname.find("sng.lrz.de") != -1:
+    mpicmd = 'mpirun -np '
+if hostname.find("setonix") != -1 or hostname.find("nid") != -1:
+    mpicmd = 'srun -n '
 
 @cfp.timer_decorator
 def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwrite=False):
@@ -144,7 +152,7 @@ def compute_vort_file(filename, ncpu=8, pixel=1024, overwrite=False):
             run_derivative_var = True
     if run_derivative_var or overwrite:
         # if plot file doesn't already contain vorticty components, generate them
-        cfp.run_shell_command('mpirun -np '+str(ncpu)+' derivative_var '+filename+' -vort')
+        cfp.run_shell_command(mpicmd+str(ncpu)+' derivative_var '+filename+' -vort')
     else:
         cfp.print("Vorticity components already in '"+filename+"' -- skipping creation.", color='green')
     # taking slices
@@ -152,7 +160,7 @@ def compute_vort_file(filename, ncpu=8, pixel=1024, overwrite=False):
         slice_filename = filename+"_vorticity_"+dim+"_slice_z.h5"
         outfile = os.path.dirname(slice_filename)+'/movie_files/'+os.path.basename(slice_filename)
         if not os.path.exists(outfile) or overwrite:
-            cfp.run_shell_command('mpirun -np '+str(ncpu)+' projection '+filename+' -dset vorticity_'+dim+' -slice -pixel '+str(pixel)+' '+str(pixel))
+            cfp.run_shell_command(mpicmd+str(ncpu)+' projection '+filename+' -dset vorticity_'+dim+' -slice -pixel '+str(pixel)+' '+str(pixel))
             cfp.run_shell_command('mv '+slice_filename+' '+outfile)
         else:
             cfp.print("Slice file '"+outfile+"' already exists -- skipping.", color='green')
@@ -179,7 +187,7 @@ def compute_spectra_file(filename, out_path='./', ncpu=8, overwrite=False):
         if not (os.path.exists(out_path+filename.split('/')[-1]+ext)) or overwrite:
             call_spectra = True
     if call_spectra:
-        cfp.run_shell_command('mpirun -np '+str(ncpu)+' spectra '+filename+' -types 0 1 7 -dsets ekdr')
+        cfp.run_shell_command(mpicmd+str(ncpu)+' spectra '+filename+' -types 0 1 7 -dsets ekdr')
         time.sleep(0.1)
         for ext in extensions:
             cfp.run_shell_command("mv "+filename+ext+" "+out_path)
