@@ -91,13 +91,13 @@ def make_paper_plots():
                 if var in ['vels','sqrtrho']: 
                     compensation_factor = spectra_dat['col1']**eval(compensation)
                     xlabel = None
-                    remove_x_ticks = True
+                    axes_format=['', None]
                     legend_formatter = None
                     label = None
                     if Mach == 0.2: 
                         ylim = [1e-10,1e-1]
                 if var == 'ekdr': 
-                    remove_x_ticks = False
+                    axes_format=[None, None]
                     compensation_factor = 1
                     xlabel = r'Wavenumber $k$'
                     legend_formatter = lf
@@ -108,14 +108,12 @@ def make_paper_plots():
                 sigylo = y - 10**(spectra_dat['col6']-spectra_dat['col7'])*norm*compensation_factor
                 sigyup = 10**(spectra_dat['col6']+spectra_dat['col7'])*norm*compensation_factor - y
                 ret = cfp.plot(x=spectra_dat['col1'], y=y, label=label,
-                color=color[isim], linestyle=linestyle[isim], legend_formatter=legend_formatter,yerr=[sigylo, sigyup],shaded_err=[0.2,color[isim]])
+                                color=color[isim], linestyle=linestyle[isim], legend_formatter=legend_formatter,
+                                yerr=[sigylo, sigyup], shaded_err=[color[isim],0.2])                
             # add Mach label
             #cfp.plot(x=0.75, y=0.95, text=rf"$\mathcal{{M}} = {mach}$", normalised_coords=True)
             #create final plot
-            if remove_x_ticks == True:
-                    ax = ret.ax()
-                    ax.set_xticklabels([])
-            cfp.plot(xlabel=xlabel, ylabel=ylabel, xlog=True, ylim=ylim, ylog=True, save=fig_path+"spectra_"+var+"_M"+MachNum+".pdf")
+            cfp.plot(axes_format=axes_format, xlabel=xlabel, ylabel=ylabel, xlog=True, ylim=ylim, ylog=True, save=fig_path+"spectra_"+var+"_M"+MachNum+".pdf")
 
 
 if __name__ == "__main__":
