@@ -168,7 +168,9 @@ def make_paper_plots():
                             cmap = 'BuPu'
                             vmin,vmax = 1e-4, 1e3
                             var = hdfio.read(filen, "ekdr_slice_xy")*(t_turb/Mach**2)
-                            if '5' in out_path:
+                            if '0p2' in out_path:
+                                 ylabel = r'$y$'
+                            elif '5' in out_path:
                                 ylabel = None
                                 cmap_label = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
                                 remove_y_ticks = True
