@@ -19,7 +19,7 @@ import cfpack as cfp
 
 # === define simulations to work on ===
 # sim_paths = ["../N256M5HDRe2500/", "../N512M5HDRe2500/", "../N1024M5HDRe2500/"]
-sim_paths = ["../N1024M0p2HDRe2500HP/", "../N1024M5HDRe2500HP/"]
+sim_paths = ["../N1024M0p2HDRe2500HPSNG/", "../N1024M0p2HDRe2500SNG/"]
 # =====================================
 
 # create figure output path
@@ -123,7 +123,8 @@ def get_2d_pdf(path, vars, overwrite=False):
     fname_pkl = out_path+"aver_2Dpdf_"+vars[0]+"_"+vars[1]+".pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         pdf_data = []
-        for d in range(20, 101, 1):
+        dump_range = [20, 20]
+        for d in range(dump_range[0], dump_range[1]+1, 1):
             filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
             po = compute_2d_pdf_file(out_path, path+filename, vars, bins=[bins_x,bins_y], norms=norms, overwrite=overwrite)
             pdf_data.append(po.pdf)
@@ -135,7 +136,7 @@ def get_2d_pdf(path, vars, overwrite=False):
             variables = vars
         if myPE == 0:
             with open(fname_pkl, "wb") as fobj:
-                print("Writing '"+fname_pkl+"'", color="magenta")
+                print("Writing '"+fname_pkl+"' averged over dump range:", dump_range, color="magenta")
                 dill.dump(pdat, fobj) # only the master rank writes to disk
     else:
         print("Read '"+fname_pkl+"'", color="green")
@@ -173,8 +174,9 @@ def compute_vort(overwrite=False):
             ncpu = 64
         else:
             ncpu = 8
-        plot_files = sorted(glob.glob(sim_path+"Turb_hdf5_plt_cnt_0???"))
-        for plot_file in plot_files:
+        dump_range = [20, 20]
+        for d in range(dump_range[0], dump_range[1]+1, 1):
+            plot_file = "Turb_hdf5_plt_cnt_{:04d}".format(d)
             compute_vort_file(plot_file, ncpu=ncpu, pixel=params(sim_path).N, overwrite=overwrite)
 
 # computes spectra using C++ pdfs function
