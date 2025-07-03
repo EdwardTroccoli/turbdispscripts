@@ -19,7 +19,8 @@ import cfpack as cfp
 
 # === define simulations to work on ===
 # sim_paths = ["../N256M5HDRe2500/", "../N512M5HDRe2500/", "../N1024M5HDRe2500/"]
-sim_paths = ["../N1024M0p2HDRe2500HPSNG/", "../N1024M0p2HDRe2500SNG/"]
+sim_paths = ["../N1024M0p2HDRe2500HPSNG_NEW/", "../N1024M0p2HDRe2500HPSNG_MAX/", "../N1024M0p2HDRe2500HPSNG_STRICT/",
+             "../N1024M0p2HDRe2500HPSNG_PREC/", "../N1024M0p2HDRe2500HPSNG/", "../N1024M0p2HDRe2500SNG/"]
 # =====================================
 
 # create figure output path
@@ -171,13 +172,13 @@ def compute_vort(overwrite=False):
         if params(sim_path).N == 2048:
             ncpu = 512
         elif params(sim_path).N == 1024:
-            ncpu = 64
+            ncpu = 512
         else:
             ncpu = 8
         dump_range = [20, 20]
         for d in range(dump_range[0], dump_range[1]+1, 1):
             plot_file = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-            compute_vort_file(plot_file, ncpu=ncpu, pixel=params(sim_path).N, overwrite=overwrite)
+            compute_vort_file(sim_path+plot_file, ncpu=ncpu, pixel=params(sim_path).N, overwrite=overwrite)
 
 # computes spectra using C++ pdfs function
 def compute_spectra_file(filename, out_path='./', ncpu=8, overwrite=False):
