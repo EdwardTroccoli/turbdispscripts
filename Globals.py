@@ -19,8 +19,7 @@ import cfpack as cfp
 
 # === define simulations to work on ===
 # sim_paths = ["../N256M5HDRe2500/", "../N512M5HDRe2500/", "../N1024M5HDRe2500/"]
-sim_paths = ["../N1024M0p2HDRe2500HPSNG_NEW/", "../N1024M0p2HDRe2500HPSNG_MAX/", "../N1024M0p2HDRe2500HPSNG_STRICT/",
-             "../N1024M0p2HDRe2500HPSNG_PREC/", "../N1024M0p2HDRe2500HPSNG/", "../N1024M0p2HDRe2500SNG/"]
+sim_paths = ["../N1024M0p2HDRe2500HPSNG_FINAL/"]
 # =====================================
 
 # create figure output path
@@ -124,7 +123,7 @@ def get_2d_pdf(path, vars, overwrite=False):
     fname_pkl = out_path+"aver_2Dpdf_"+vars[0]+"_"+vars[1]+".pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         pdf_data = []
-        dump_range = [20, 20]
+        dump_range = [20, 100]
         for d in range(dump_range[0], dump_range[1]+1, 1):
             filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
             po = compute_2d_pdf_file(out_path, path+filename, vars, bins=[bins_x,bins_y], norms=norms, overwrite=overwrite)
@@ -175,7 +174,7 @@ def compute_vort(overwrite=False):
             ncpu = 512
         else:
             ncpu = 8
-        dump_range = [20, 20]
+        dump_range = [20, 100]
         for d in range(dump_range[0], dump_range[1]+1, 1):
             plot_file = "Turb_hdf5_plt_cnt_{:04d}".format(d)
             compute_vort_file(sim_path+plot_file, ncpu=ncpu, pixel=params(sim_path).N, overwrite=overwrite)
