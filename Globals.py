@@ -43,10 +43,12 @@ vars_2Dpdf = [["dens", "ekdr"], ["vort", "ekdr"]]
 
 # host settings
 hostname = cfp.get_hostname()
-if hostname.find("gadi") != -1 or hostname.find("sng.lrz.de") != -1:
+if hostname.find("gadi") != -1:
     mpicmd = 'mpirun -np '
 if hostname.find("setonix") != -1 or hostname.find("nid") != -1:
     mpicmd = 'srun -n '
+if hostname.find("sng.lrz.de") != -1:
+    mpicmd = 'mpiexec -n '
 
 @cfp.timer_decorator
 def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwrite=False):
