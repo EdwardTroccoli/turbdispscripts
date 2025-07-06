@@ -18,8 +18,7 @@ from cfpack.defaults import *
 import cfpack as cfp
 
 # === define simulations to work on ===
-# sim_paths = ["../N256M5HDRe2500/", "../N512M5HDRe2500/", "../N1024M5HDRe2500/"]
-sim_paths = ["../N1024M0p2HDRe2500HPSNG_FINAL/"]
+sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
 # =====================================
 
 # create figure output path
@@ -199,7 +198,7 @@ def compute_spectra_file(filename, out_path='./', ncpu=8, overwrite=False):
 def compute_spectra(overwrite=False):
     for sim_path in sim_paths:
         if params(sim_path).N == 2048:
-            ncpu = 512
+            ncpu = 4096
         elif params(sim_path).N == 1024:
             ncpu = 64
         else:
