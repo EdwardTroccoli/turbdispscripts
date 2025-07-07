@@ -59,21 +59,23 @@ def make_paper_plots():
                 compensation = '2'   
             color = ['black', 'magenta', 'green', 'grey']
             linestyle = ['solid', 'dashed', 'dashdot', 'dotted']
-            dx = [0, 0.215, 0.215, 0.21]
+            dx = [0, 0.24, 0.24, 0.235]
             # loop over simulations
             for isim, sim in enumerate(sims):
                 # get sim parameters
                 N = params(sim).N
                 Mach = params(sim).Mach
                 t_turb = params(sim).t_turb
+                ylabel = ''
                 if var == 'vels': 
                     spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_vels.dat"))
                     norm = 1
                     ylabel = r'$P_{\mathcal{M}}(k)\,k^{'+compensation+'}$'
                 if var == 'ekdr': 
                     spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_dset_ekdr.dat"))
-                    norm = t_turb/Mach**2
-                    ylabel = r'$P_{\varepsilon_\mathrm{kin}}(k)$'
+                    norm = (t_turb/Mach**2)**2
+                    if Mach == 0.2:
+                        ylabel = r'$P_{\varepsilon_\mathrm{kin}}(k)\,/\,(\mathcal{M}^2t_\mathrm{turb}^{-1})^2$'
                 if var == 'sqrtrho': 
                     spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_sqrtrho.dat"))
                     norm = 1.0/(Mach*N)
@@ -85,7 +87,7 @@ def make_paper_plots():
                     write_spect(dat, aver_dat, header_aver) # write averaged spectra
                 spectra_dat, spectra_header = read_spect(dat) 
                 # plot
-                xpos, ypos, length = 0.012, 0.1, 1.4
+                xpos, ypos, length = 0.012, 0.085, 1.4
                 lf = cfp.legend_formatter(pos=(xpos+isim*dx[isim], ypos), length=length)
                 ylim = None
                 if var in ['vels','sqrtrho']: 
@@ -102,8 +104,7 @@ def make_paper_plots():
                     xlabel = r'Wavenumber $k$'
                     legend_formatter = lf
                     label=MachSim+str(N)
-                    if Mach == 0.2: 
-                        ylim = [1e-7,1e-1]
+                    ylim = [5e-5,5e0]
                 y = 10**spectra_dat['col6']*norm*compensation_factor
                 sigylo = y - 10**(spectra_dat['col6']-spectra_dat['col7'])*norm*compensation_factor
                 sigyup = 10**(spectra_dat['col6']+spectra_dat['col7'])*norm*compensation_factor - y
