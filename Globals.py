@@ -13,7 +13,6 @@ import dill
 import flashlib as fl
 import gc, copy
 from tqdm import tqdm
-from cfpack.mpi import MPI, comm, nPE, myPE
 from cfpack.defaults import *
 import cfpack as cfp
 
@@ -52,6 +51,7 @@ if hostname.find("sng.lrz.de") != -1:
 
 @cfp.timer_decorator
 def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwrite=False):
+    from cfpack.mpi import MPI, comm, nPE, myPE
     print("Total number of MPI ranks = "+str(nPE))
     if MPI: comm.Barrier()
     fname_pkl = out_path+os.path.basename(filename)+"_2Dpdf_"+vars[0]+"_"+vars[1]+".pkl"
