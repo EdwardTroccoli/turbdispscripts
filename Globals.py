@@ -100,6 +100,7 @@ def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwri
 
 # computes or reads (if file already exists) 2D PDF for variables 'vars' in simulation 'path'
 def get_2d_pdf(path, vars, overwrite=False):
+    from cfpack.mpi import myPE
     # helper function to get normalisations
     def get_2Dpdf_norms(model_name, vars):
         norm_ekdr = params(model_name).t_turb / params(model_name).Mach**2
