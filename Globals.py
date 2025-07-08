@@ -170,7 +170,7 @@ def compute_vort_file(filename, ncpu=8, pixel=1024, overwrite=False):
 def compute_vort(overwrite=False):
     for sim_path in sim_paths:
         if params(sim_path).N == 2048:
-            ncpu = 512
+            ncpu = 4096
         elif params(sim_path).N == 1024:
             ncpu = 512
         else:
@@ -200,7 +200,7 @@ def compute_spectra_file(filename, out_path='./', ncpu=8, overwrite=False):
 def compute_spectra(overwrite=False):
     for sim_path in sim_paths:
         if params(sim_path).N == 2048:
-            ncpu = 4096
+            ncpu = 2048
         elif params(sim_path).N == 1024:
             ncpu = 64
         else:
