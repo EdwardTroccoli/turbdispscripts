@@ -201,7 +201,7 @@ def compute_spectra_file(filename, out_path='./', ncpu=8, overwrite=False):
 def compute_spectra(overwrite=False):
     for sim_path in sim_paths:
         if params(sim_path).N == 2048:
-            ncpu = 2048
+            ncpu = 512
         elif params(sim_path).N == 1024:
             ncpu = 64
         else:
