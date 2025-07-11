@@ -66,7 +66,6 @@ def make_paper_plots():
                 N = params(sim).N
                 Mach = params(sim).Mach
                 t_turb = params(sim).t_turb
-                ylabel = ''
                 if var == 'vels': 
                     spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_vels.dat"))
                     norm = 1
@@ -74,8 +73,7 @@ def make_paper_plots():
                 if var == 'ekdr': 
                     spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_dset_ekdr.dat"))
                     norm = (t_turb/Mach**2)**2
-                    if Mach == 0.2:
-                        ylabel = r'$P_{\varepsilon_\mathrm{kin}}(k)\,/\,(\mathcal{M}^2t_\mathrm{turb}^{-1})^2$'
+                    ylabel = r'$P_{\varepsilon_\mathrm{kin}}(k)\,/\,(\mathcal{M}^2t_\mathrm{turb}^{-1})^2$'
                 if var == 'sqrtrho': 
                     spectra_files = sorted(glob.glob("../"+sim+"/spectra/"+"*_spect_sqrtrho.dat"))
                     norm = 1.0/(Mach*N)
