@@ -206,7 +206,7 @@ if __name__ == "__main__":
                     by_hand_fit = [1.5, -1.0] # exponent and normalisation of power-law line to draw
                     fit_xlim = [1e-2, 1e1]
                 if vars[0] == "vort":
-                    by_hand_fit = [2.0, 2.5] # exponent and normalisation of power-law line to draw
+                    by_hand_fit = [2.0, 2.0] # exponent and normalisation of power-law line to draw
                     fit_xlim = [1e-2, 3e-1]
                 pdat = get_2d_pdf(path, vars)
                 # Plot 2D-PDF
