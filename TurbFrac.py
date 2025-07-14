@@ -9,6 +9,7 @@ import argparse
 import cfpack as cfp
 import numpy as np
 import matplotlib.pyplot as plt
+import flashlib as fl
 
 
 def extract_ekdr(filename, variable='ekdr', overwrite=False, norm=None):
@@ -31,6 +32,7 @@ def extract_ekdr(filename, variable='ekdr', overwrite=False, norm=None):
         print("Read '"+fname_pkl+"'", color="green")
         ret = dill.load(open(fname_pkl, "rb"))
     return ret
+
 
 def compute_mass_radius_fractal_dim(field, center, r_max=10):
     shape = field.shape
@@ -64,7 +66,25 @@ def compute_mass_radius_fractal_dim(field, center, r_max=10):
 
     return D, radii, masses
 
-    
+
+
+def compute_ekdr_size_fractal_dim(filename, lmax=1.0):
+    gg = fl.FlashGG(filename)
+    centre = gg.GetMaxLoc("ekdr")
+    N = gg.NMax[0]
+    D = gg.D[0][0]
+    sum = []
+    size = []
+    for l in range(1, N, 2):
+        print("Working on size l = "+str(l*D), color="cyan")
+        box_bounds = np.array([centre-l*D/2, centre+l*D/2]).T
+        co = gg.GetCells("ekdr", box_bounds=box_bounds)
+        sum.append(co.cell_dat.sum())
+        size.append(l*D)
+    sum = np.array(sum)
+    size = np.array(size)
+    stop()
+
 
 if __name__ == "__main__":
 
@@ -80,25 +100,18 @@ if __name__ == "__main__":
     # loop over simulations
     for i, path in enumerate(sim_paths):
 
-        N = params(path).N
-        t_turb = params(path).t_turb
-        Mach = params(path).Mach
-        if Mach == 0.2: MachStr = '0p2'
-        if Mach == 5:   MachStr = '5'
-
         print(f'\nWorking on: {path}', color='cyan')
 
         # creates the file output dir
         out_path = path + "FracDim/"
         if not os.path.isdir(out_path):
             cfp.run_shell_command('mkdir '+out_path)
-        
+
         frac_dims = []
         for d in range(20, 101):
             filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-            ret = extract_ekdr(path+filename)
-            field = ret['field']
-            center = ret['max_loc']
-            D, radii, masses = compute_mass_radius_fractal_dim(field, center, r_max=10)        
-            frac_dims.append(D)
+            compute_ekdr_size_fractal_dim(path+filename)
+            #D, radii, masses = compute_mass_radius_fractal_dim(field, center, r_max=10)
+            #frac_dims.append(D)
+
         print(f"Estimated fractal dimension: {np.mean(frac_dims):.3f}")
