@@ -10,14 +10,13 @@ import argparse
 import numpy as np
 from scipy.stats import binned_statistic_2d
 import dill
-import flashlib as fl
 import gc, copy
 from tqdm import tqdm
 from cfpack.defaults import *
 import cfpack as cfp
 
 # === define simulations to work on ===
-sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
+sim_paths = ["../N256M0p2HDRe2500/"]
 # =====================================
 
 # create figure output path
@@ -51,6 +50,7 @@ if hostname.find("sng.lrz.de") != -1:
 
 @cfp.timer_decorator
 def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwrite=False):
+    import flashlib as fl
     from cfpack.mpi import MPI, comm, nPE, myPE
     print("Total number of MPI ranks = "+str(nPE))
     if MPI: comm.Barrier()
