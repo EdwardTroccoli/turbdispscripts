@@ -10,63 +10,7 @@ import cfpack as cfp
 import numpy as np
 import matplotlib.pyplot as plt
 import flashlib as fl
-
-
-def extract_ekdr(filename, variable='ekdr', overwrite=False, norm=None):
-    fname_pkl = f"{out_path+os.path.basename(filename)}_{variable}_frac_dim_M{MachStr}.pkl"
-    if not os.path.isfile(fname_pkl) or overwrite:
-        # read data
-        gg = fl.FlashGG(filename)
-        print(f"Reading {variable} data from plot files...", color="red")
-        field = gg.GetUniformGrid(dset=variable)
-        max_index_flat = np.argmax(field)
-        max_loc = np.unravel_index(max_index_flat, field.shape)
-        ret = {
-            'field': field,
-            'max_loc': max_loc,
-        }
-        with open(fname_pkl, "wb") as fobj:
-            print(f"Writing '{fname_pkl}'", color="magenta")
-            dill.dump(ret, fobj)
-    else:
-        print("Read '"+fname_pkl+"'", color="green")
-        ret = dill.load(open(fname_pkl, "rb"))
-    return ret
-
-
-def compute_mass_radius_fractal_dim(field, center, r_max=10):
-    shape = field.shape
-    radii = np.arange(1, r_max + 1)
-    masses = []
-
-    for r in radii:
-        xmin = max(0, center[0] - r)
-        xmax = min(shape[0], center[0] + r + 1)
-        ymin = max(0, center[1] - r)
-        ymax = min(shape[1], center[1] + r + 1)
-        zmin = max(0, center[2] - r)
-        zmax = min(shape[2], center[2] + r + 1)
-
-        xg = np.arange(xmin, xmax)
-        yg = np.arange(ymin, ymax)
-        zg = np.arange(zmin, zmax)
-        xx, yy, zz = np.meshgrid(xg, yg, zg, indexing='ij')
-
-        dist = np.sqrt((xx - center[0])**2 + (yy - center[1])**2 + (zz - center[2])**2)
-        filter = dist <= r
-
-        subfield = field[xmin:xmax, ymin:ymax, zmin:zmax]
-        mass = subfield[filter].sum()
-        masses.append(mass)
-
-    log_r = np.log(radii)
-    log_m = np.log(masses)
-    slope, intercept = np.polyfit(log_r, log_m, 1)
-    D = slope
-
-    return D, radii, masses
-
-
+from scipy.stats import linregress
 
 def compute_ekdr_size_fractal_dim(filename, lmax=1.0):
     gg = fl.FlashGG(filename)
@@ -81,10 +25,10 @@ def compute_ekdr_size_fractal_dim(filename, lmax=1.0):
         co = gg.GetCells("ekdr", box_bounds=box_bounds)
         sum.append(co.cell_dat.sum())
         size.append(l*D)
-    sum = np.array(sum)
-    size = np.array(size)
-    stop()
-
+    sum = np.log(np.array(sum))
+    size = nnp.log(p.array(size))
+    slope, intercept, r_value, p_value, std_err = linregress(size, sum)
+    return slope
 
 if __name__ == "__main__":
 
@@ -110,8 +54,7 @@ if __name__ == "__main__":
         frac_dims = []
         for d in range(20, 101):
             filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-            compute_ekdr_size_fractal_dim(path+filename)
-            #D, radii, masses = compute_mass_radius_fractal_dim(field, center, r_max=10)
-            #frac_dims.append(D)
+            d = compute_ekdr_size_fractal_dim(path+filename)
+            frac_dims.append(d)
 
         print(f"Estimated fractal dimension: {np.mean(frac_dims):.3f}")
