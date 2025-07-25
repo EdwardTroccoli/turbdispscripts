@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # written by Edward Troccoli & Christoph Federrath, 2025
 
-import cfpack as cfp
 import h5py
 import os, time
 import glob
