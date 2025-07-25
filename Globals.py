@@ -47,6 +47,19 @@ if hostname.find("setonix") != -1 or hostname.find("nid") != -1:
 if hostname.find("sng.lrz.de") != -1:
     mpicmd = 'mpiexec -n '
 
+
+def compute_ekdr_size_fractal_dim_file(filename):
+    import flashlib as fl
+    from cfpack.mpi import MPI, comm, nPE, myPE
+    gg = fl.FlashGG(filename)
+    N = gg.NMax[0]
+    bins = [N/2, 400]
+    bintype = ['lin', 'log']
+    range = [[None, None], [1e-14, 1e6]]
+    centre = gg.GetMaxLoc("ekdr")
+    bs = gg.binned_statistic(centre=centre, statistic='sum', bins=bins, bintype=bintype, range=range)
+
+
 @cfp.timer_decorator
 def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwrite=False):
     import flashlib as fl
@@ -117,9 +130,9 @@ def get_2d_pdf(path, vars, overwrite=False):
     if not os.path.isdir(out_path):
         if myPE == 0: cfp.run_shell_command('mkdir '+out_path)
     # set binning
-    if vars[1] == "ekdr": bins_y = np.logspace(-8, 6, 250)
-    if vars[0] == "dens": bins_x = np.logspace(-4, 3, 250)
-    if vars[0] == "vort": bins_x = np.logspace(-6, 1, 250)
+    if vars[1] == "ekdr": bins_y = np.logspace(-14, 6, 400)
+    if vars[0] == "dens": bins_x = np.logspace(-6, 4, 200)
+    if vars[0] == "vort": bins_x = np.logspace(-9, 1, 200)
     norms = get_2Dpdf_norms(path, vars)
     fname_pkl = out_path+"aver_2Dpdf_"+vars[0]+"_"+vars[1]+".pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
