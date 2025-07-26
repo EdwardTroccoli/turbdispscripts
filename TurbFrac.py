@@ -26,8 +26,9 @@ def compute_ekdr_size_fractal_dim(filename, lmax=1.0):
         sum.append(co.cell_dat.sum())
         size.append(l*D)
     sum = np.log(np.array(sum))
-    size = nnp.log(p.array(size))
+    size = np.log(np.array(size))
     slope, intercept, r_value, p_value, std_err = linregress(size, sum)
+    stop()
     return slope
 
 if __name__ == "__main__":
