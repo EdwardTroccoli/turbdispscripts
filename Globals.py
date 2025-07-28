@@ -48,32 +48,39 @@ if hostname.find("sng.lrz.de") != -1:
     mpicmd = 'mpiexec -n '
 
 
-def compute_ekdr_size_fractal_dim_file(filename, overwrite=False):
+def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False):
     import flashlib as fl
     from cfpack.mpi import MPI, comm, nPE, myPE
-    gg = fl.FlashGG(filename)
-    N = gg.NMax[0]
-    bins = [N/2, 400]
-    bintype = ['lin', 'log']
-    range = [[None, None], [1e-14, 1e6]]
-    centre = gg.GetMaxLoc("ekdr")
-    bs = gg.binned_statistic(centre=centre, statistic='sum', bins=bins, bintype=bintype, range=range)
-    bs.x
-    bs.x
+    fname_pkl = out_path+os.path.basename(filename)+"_ekdr_vs_size.pkl"
+    if not os.path.isfile(fname_pkl) or overwrite:
+        gg = fl.FlashGG(filename)
+        N = gg.NMax[0]
+        bins = [int(N/2), 400]
+        bintype = ['lin', 'log']
+        range = [[None, None], [1e-14, 1e6]]
+        centre = gg.GetMaxLoc("ekdr")
+        bs = gg.binned_statistic(centre=centre, statistic='sum', bins=bins, bintype=bintype, range=range)
+        # get cumulative distribution
+        bs.y = np.cumsum(bs.y)
+        if myPE == 0: # only the master PE writes
+            # save the data to file
+            with open(fname_pkl, "wb") as fobj:
+                print("Writing '"+fname_pkl+"'", color="magenta")
+                dill.dump(bs, fobj)
 
 def compute_ekdr_size_fractal_dim(overwrite=False):
-    for sim_path in sim_paths:
+    for path in sim_paths:
         # compute ekdr vs. size
-        print(f'\nComputing EKDR vs. size fractal dimension for: {path}', color='cyan')
+        print(f'\nComputing kinetic energy dissipation rate vs. size for fractal dimension analysis for: {path}', color='cyan')
         # create file output dir
-        out_path = path + "PDFs/"
+        out_path = path + "FracDim/"
         if not os.path.isdir(out_path):
             cfp.run_shell_command('mkdir '+out_path)
         # loop over files
         dump_range = [20, 100]
         for d in range(dump_range[0], dump_range[1]+1, 1):
             plot_file = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-            compute_ekdr_size_fractal_dim_file(sim_path+plot_file, overwrite=overwrite)
+            compute_ekdr_size_fractal_dim_file(out_path, path+plot_file, overwrite=overwrite)
 
 @cfp.timer_decorator
 def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwrite=False):
@@ -259,6 +266,7 @@ if __name__ == "__main__":
     parser.add_argument("-compute_vort", "--compute_vort", action='store_true', default=False, help="Compute vorticity.")
     parser.add_argument("-compute_2dpdfs", "--compute_2dpdfs", action='store_true', default=False, help="Compute 2D-PDFs.")
     parser.add_argument("-compute_spectra", "--compute_spectra", action='store_true', default=False, help="Compute spectra.")
+    parser.add_argument("-compute_ekdr_size", "--compute_ekdr_size", action='store_true', default=False, help="Compute EKDR vs. size for fractal dimension.")
     args = parser.parse_args()
 
     if args.clean_datfile:
@@ -275,3 +283,6 @@ if __name__ == "__main__":
 
     if args.compute_spectra:
         compute_spectra(overwrite=args.overwrite)
+
+    if args.compute_ekdr_size:
+        compute_ekdr_size_fractal_dim(overwrite=args.overwrite)
