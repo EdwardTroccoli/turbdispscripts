@@ -11,7 +11,7 @@ from scipy.stats import binned_statistic_2d
 import dill
 import gc, copy
 from tqdm import tqdm
-from cfpack.defaults import *
+from cfpack import print, stop
 import cfpack as cfp
 
 # === define simulations to work on ===
@@ -49,15 +49,15 @@ if hostname.find("sng.lrz.de") != -1:
 
 
 def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False):
-    import flashlib as fl
     from cfpack.mpi import MPI, comm, nPE, myPE
+    import flashlib as fl
     fname_pkl = out_path+os.path.basename(filename)+"_ekdr_vs_size.pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         gg = fl.FlashGG(filename)
         N = gg.NMax[0]
-        bins = [int(N/2), 400]
+        bins = [int(N), 400]
         bintype = ['lin', 'log']
-        range = [[None, None], [1e-14, 1e6]]
+        range = [[0.0, 0.5*np.sqrt(3)], [1e-14, 1e6]]
         centre = gg.GetMaxLoc("ekdr")
         bs = gg.binned_statistic(centre=centre, statistic='sum', bins=bins, bintype=bintype, range=range)
         # get cumulative distribution
@@ -67,20 +67,43 @@ def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False):
             with open(fname_pkl, "wb") as fobj:
                 print("Writing '"+fname_pkl+"'", color="magenta")
                 dill.dump(bs, fobj)
+    # read from file
+    if MPI: comm.Barrier()
+    print("Read '"+fname_pkl+"'", color="green")
+    ret = dill.load(open(fname_pkl, "rb"))
+    return ret
 
-def compute_ekdr_size_fractal_dim(overwrite=False):
-    for path in sim_paths:
-        # compute ekdr vs. size
-        print(f'\nComputing kinetic energy dissipation rate vs. size for fractal dimension analysis for: {path}', color='cyan')
-        # create file output dir
-        out_path = path + "FracDim/"
+def get_ekdr_size_fractal_dim(path, overwrite=False):
+    from cfpack.mpi import MPI, comm, nPE, myPE
+    # compute ekdr vs. size
+    print(f'Computing kinetic energy dissipation rate vs. size for fractal dimension analysis for: {path}', color='cyan')
+    # create file output dir
+    out_path = path + "FracDim/"
+    if myPE == 0:
         if not os.path.isdir(out_path):
             cfp.run_shell_command('mkdir '+out_path)
-        # loop over files
-        dump_range = [20, 100]
+    # output file
+    fname_pkl = out_path+"aver_ekdr_vs_size.pkl"
+    if not os.path.isfile(fname_pkl) or overwrite:
+        bs_y = []
+        dump_range = [20, 20]
         for d in range(dump_range[0], dump_range[1]+1, 1):
-            plot_file = "Turb_hdf5_plt_cnt_{:04d}".format(d)
-            compute_ekdr_size_fractal_dim_file(out_path, path+plot_file, overwrite=overwrite)
+            filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
+            bs = compute_ekdr_size_fractal_dim_file(out_path, path+filename, overwrite=overwrite)
+            bs_y.append(bs.y)
+        # setup a class to store edges and the averaged pdf data.
+        class bsdat:
+            y = np.mean(np.stack(bs_y, axis=0), axis=0)
+            x = bs.x
+        if myPE == 0: # only the master rank writes to disk
+            with open(fname_pkl, "wb") as fobj:
+                print("Writing '"+fname_pkl+"' averged over dump range:", dump_range, color="magenta")
+                dill.dump(bsdat, fobj)
+    else:
+        print("Read '"+fname_pkl+"'", color="green")
+        bsdat = dill.load(open(fname_pkl, "rb"))
+    # return averaged 2D PDF
+    return bsdat
 
 @cfp.timer_decorator
 def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwrite=False):
@@ -170,10 +193,10 @@ def get_2d_pdf(path, vars, overwrite=False):
             x_edges = po.x_edges
             y_edges = po.y_edges
             variables = vars
-        if myPE == 0:
+        if myPE == 0: # only the master rank writes to disk
             with open(fname_pkl, "wb") as fobj:
                 print("Writing '"+fname_pkl+"' averged over dump range:", dump_range, color="magenta")
-                dill.dump(pdat, fobj) # only the master rank writes to disk
+                dill.dump(pdat, fobj)
     else:
         print("Read '"+fname_pkl+"'", color="green")
         pdat = dill.load(open(fname_pkl, "rb"))
@@ -285,4 +308,6 @@ if __name__ == "__main__":
         compute_spectra(overwrite=args.overwrite)
 
     if args.compute_ekdr_size:
-        compute_ekdr_size_fractal_dim(overwrite=args.overwrite)
+        for path in sim_paths:
+            bs = get_ekdr_size_fractal_dim(path, overwrite=args.overwrite)
+            stop()
