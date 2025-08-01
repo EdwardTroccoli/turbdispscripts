@@ -55,13 +55,17 @@ def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False):
     if not os.path.isfile(fname_pkl) or overwrite:
         gg = fl.FlashGG(filename)
         N = gg.NMax[0]
-        bins = [int(N), 400]
+        dr = gg.D[0][0]
+        half_diag = 0.5*np.sqrt(3)
+        nbins_r = int(np.ceil(half_diag/dr))
+        bins = [nbins_r, 400]
         bintype = ['lin', 'log']
-        range = [[0.0, 0.5*np.sqrt(3)], [1e-14, 1e6]]
+        range = [[0.0, nbins_r*dr], [1e-14, 1e6]]
         centre = gg.GetMaxLoc("ekdr")
         bs = gg.binned_statistic(centre=centre, statistic='sum', bins=bins, bintype=bintype, range=range)
-        # get cumulative distribution
-        bs.y = np.cumsum(bs.y)
+        # get cumulative distribution and normalise by number of cells and by the EKDR unit
+        norm_ekdr = params(out_path).t_turb / params(out_path).Mach**2
+        bs.y = np.cumsum(bs.y) / np.prod(gg.NMax) * norm_ekdr
         if myPE == 0: # only the master PE writes
             # save the data to file
             with open(fname_pkl, "wb") as fobj:
