@@ -15,7 +15,7 @@ from cfpack import print, stop
 import cfpack as cfp
 
 # === define simulations to work on ===
-sim_paths = ["../N256M0p2HDRe2500/"]
+sim_paths = ["../N256M0p2HDRe2500/", "../N256M5HDRe2500/"]
 # =====================================
 
 # create figure output path
@@ -90,14 +90,14 @@ def get_ekdr_size_fractal_dim(path, overwrite=False):
     fname_pkl = out_path+"aver_ekdr_vs_size.pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         bs_y = []
-        dump_range = [20, 20]
+        dump_range = [20, 100]
         for d in range(dump_range[0], dump_range[1]+1, 1):
             filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
             bs = compute_ekdr_size_fractal_dim_file(out_path, path+filename, overwrite=overwrite)
             bs_y.append(bs.y)
         # setup a class to store edges and the averaged pdf data.
         class bsdat:
-            y = np.mean(np.stack(bs_y, axis=0), axis=0)
+            y = np.exp(np.mean(np.log(np.stack(bs_y, axis=0)), axis=0))
             x = bs.x
         if myPE == 0: # only the master rank writes to disk
             with open(fname_pkl, "wb") as fobj:
@@ -314,4 +314,4 @@ if __name__ == "__main__":
     if args.compute_ekdr_size:
         for path in sim_paths:
             bs = get_ekdr_size_fractal_dim(path, overwrite=args.overwrite)
-            stop()
+
