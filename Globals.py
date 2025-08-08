@@ -51,6 +51,7 @@ if hostname.find("sng.lrz.de") != -1:
 def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False):
     from cfpack.mpi import MPI, comm, nPE, myPE
     import flashlib as fl
+    norm_ekdr = params(out_path).t_turb / params(out_path).Mach**2 # EKDR norm
     fname_pkl = out_path+os.path.basename(filename)+"_ekdr_vs_size.pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         gg = fl.FlashGG(filename)
@@ -58,14 +59,14 @@ def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False):
         dr = gg.D[0][0]
         half_diag = 0.5*np.sqrt(3)
         nbins_r = int(np.ceil(half_diag/dr))
-        bins = [nbins_r, 400]
-        bintype = ['lin', 'log']
-        range = [[0.0, nbins_r*dr], [1e-14, 1e6]]
+        bins = [nbins_r, 1000]
+        bin_type = ['lin', 'log']
         centre = gg.GetMaxLoc("ekdr")
-        bs = gg.binned_statistic(centre=centre, statistic='sum', bins=bins, bintype=bintype, range=range)
+        print("min/max(ekdr) = ", gg.GetMin("ekdr"), gg.GetMax("ekdr"))
+        range = [[0.0, nbins_r*dr], [-1e20, 1e20]]
+        bs = gg.binned_statistic(x="radius", y="ekdr", centre=centre, statistic='sum', bins=bins, bin_type=bin_type, range=range)
         # get cumulative distribution and normalise by number of cells and by the EKDR unit
-        norm_ekdr = params(out_path).t_turb / params(out_path).Mach**2
-        bs.y = np.cumsum(bs.y) / np.prod(gg.NMax) * norm_ekdr
+        bs.y = np.nancumsum(bs.y) / np.prod(gg.NMax) * norm_ekdr
         if myPE == 0: # only the master PE writes
             # save the data to file
             with open(fname_pkl, "wb") as fobj:
@@ -98,7 +99,7 @@ def get_ekdr_size_fractal_dim(path, overwrite=False):
         # setup a class to store edges and the averaged pdf data.
         class bsdat:
             y = np.exp(np.mean(np.log(np.stack(bs_y, axis=0)), axis=0))
-            x = bs.x
+            x = bs.xc
         if myPE == 0: # only the master rank writes to disk
             with open(fname_pkl, "wb") as fobj:
                 print("Writing '"+fname_pkl+"' averged over dump range:", dump_range, color="magenta")
