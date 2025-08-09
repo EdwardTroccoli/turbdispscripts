@@ -61,9 +61,12 @@ def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False):
         nbins_r = int(np.ceil(half_diag/dr))
         bins = [nbins_r, 1000]
         bin_type = ['lin', 'log']
-        centre = gg.GetMaxLoc("ekdr")
-        print("min/max(ekdr) = ", gg.GetMin("ekdr"), gg.GetMax("ekdr"))
-        range = [[0.0, nbins_r*dr], [-1e20, 1e20]]
+        range = [[0.0, nbins_r*dr], [-1e10, 1e10]]
+        minmax_obj = gg.GetMinMax("ekdr")
+        centre = minmax_obj.max_loc
+        print("min, max, max_loc = ", minmax_obj.min, minmax_obj.max, centre)
+        if minmax_obj.min < range[1][0] or minmax_obj.max > range[1][1]:
+            print("Bin range for EKDR is too small!", error=True)
         bs = gg.binned_statistic(x="radius", y="ekdr", centre=centre, statistic='sum', bins=bins, bin_type=bin_type, range=range)
         # get cumulative distribution and normalise by number of cells and by the EKDR unit
         bs.y = np.nancumsum(bs.y) / np.prod(gg.NMax) * norm_ekdr
