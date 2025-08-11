@@ -15,7 +15,7 @@ from cfpack import print, stop
 import cfpack as cfp
 
 # === define simulations to work on ===
-sim_paths = ["../N256M0p2HDRe2500/", "../N256M5HDRe2500/"]
+sim_paths = ["../N512M0p2HDRe2500/", "../N512M5HDRe2500/"]
 # =====================================
 
 # create figure output path
