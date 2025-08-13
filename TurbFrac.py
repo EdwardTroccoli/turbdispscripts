@@ -10,34 +10,84 @@ import cfpack as cfp
 import numpy as np
 import matplotlib.pyplot as plt
 import flashlib as fl
-from scipy.stats import linregress
 
+
+def make_paper_plots():
+        machs = [0.2, 5]
+        for imach, mach in enumerate(machs):
+            if mach == 0.2:
+                sims = ["N1024M0p2HDRe2500", "N512M0p2HDRe2500", "N256M0p2HDRe2500"]
+                MachNum = '0p2'
+                MachSim = 'Sub'
+                compensation = '5/3'
+            if mach == 5:
+                sims = ["N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
+                MachNum = '5'
+                MachSim = 'Sup'
+                compensation = '2'   
+            color = ['black', 'magenta', 'green', 'grey']
+            linestyle = ['solid', 'dashed', 'dashdot', 'dotted']
+            dx = [0, 0.24, 0.24, 0.235]
+            # loop over simulations
+            for isim, sim in enumerate(sims):
+                # get sim parameters
+                N = params(sim).N
+                Mach = params(sim).Mach
+                t_turb = params(sim).t_turb
+                if Mach == 0.2: MachStr = '0p2'
+                if Mach == 5:   MachStr = '5'
+                # read data
+                ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
+                bsdat = get_ekdr_size_fractal_dim("../"+sim+"/")
+
+                # plot
+                xpos, ypos, length = 0.012, 0.085, 1.4
+                lf = cfp.legend_formatter(pos=(xpos+isim*dx[isim], ypos), length=length)
+                ret = cfp.plot(x=bsdat.x, y=bsdat.y, label=MachSim+str(N),
+                                color=color[isim], linestyle=linestyle[isim], legend_formatter=lf
+                                )                
+            # add Mach label
+            #cfp.plot(x=0.75, y=0.95, text=rf"$\mathcal{{M}} = {mach}$", normalised_coords=True)
+            #create final plot
+            for i in range(1,4):
+                cfp.plot(x=bsdat.x, y=bsdat.x**i, label=rf'$\propto r^{i}$')
+            cfp.plot(xlabel="Radius", ylabel=ylabel, xlog=True, ylog=True, save=fig_path+"ekdr_vs_size_frac_dim_M"+MachStr+".pdf")
 
 if __name__ == "__main__":
 
     # Argument parser setup
     parser = argparse.ArgumentParser(description="Plot fractal dimension.")
+    parser.add_argument("-paper", "--paper_plots", action='store_true', default=False, help="Runs all movie frame plots at paper level quality")
     args = parser.parse_args()
 
+
+    # Start timing the process
+    start_time = timeit.default_timer()
+
     # loop over simulations
-    for i, path in enumerate(sim_paths):
+    if args.paper_plots:
+        make_paper_plots()
+    else:
+        for i, path in enumerate(sim_paths):
 
-        print(f'\nWorking on: {path}', color='cyan')
+            print(f'\nWorking on: {path}', color='cyan')
 
-        N = params(path).N
-        t_turb = params(path).t_turb
-        Mach = params(path).Mach
-        if Mach == 0.2: MachStr = '0p2'
-        if Mach == 5:   MachStr = '5'
+            N = params(path).N
+            t_turb = params(path).t_turb
+            Mach = params(path).Mach
+            if Mach == 0.2: MachStr = '0p2'
+            if Mach == 5:   MachStr = '5'
 
-        # Read data and plot
-        outfile = path+'FracDim/aver_ekdr_vs_size'+MachStr+'.pdf'
-        ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
-        bsdat = get_ekdr_size_fractal_dim(path)
-        cfp.plot(x=bsdat.x, y=bsdat.y, type='scatter', label='sim')
-        cfp.plot(x=0.85, y=0.05, text=rf"$\mathcal{{M}} = {Mach}$", normalised_coords=True)
-        for i in range(1,4):
-            cfp.plot(x=bsdat.x, y=bsdat.x**i, label=rf'$\propto r^{i}$')
-        cfp.plot(xlog=True, ylog=True, xlabel=r"Distance $r$", ylabel=ylabel,
-                 save=fig_path+"ekdr_vs_size_frac_dim_M"+MachStr+".pdf")
+            # Read data and plot
+            ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
+            bsdat = get_ekdr_size_fractal_dim(path)
+            cfp.plot(x=bsdat.x, y=bsdat.y, type='scatter', label='sim')
+            cfp.plot(x=0.85, y=0.05, text=rf"$\mathcal{{M}} = {Mach}$", normalised_coords=True)
+            for i in range(1,4):
+                cfp.plot(x=bsdat.x, y=bsdat.x**i, label=rf'$\propto r^{i}$')
+            cfp.plot(xlog=True, ylog=True, xlabel=r"Distance $r$", ylabel=ylabel,
+                    save=fig_path+"ekdr_vs_size_frac_dim_M"+MachStr+"_N"+str(N)+".pdf")
 
+    # End timing and output the total processing time
+    stop_time = timeit.default_timer()
+    print("Processing time: {:.2f}s".format(stop_time - start_time))
