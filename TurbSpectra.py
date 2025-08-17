@@ -165,5 +165,5 @@ if __name__ == "__main__":
                 plot_spectra(spectra_dat, var, Mach,save=fig_path+'aver_spectra'+ "_" + var + "_" + "M" +MachNum +'.pdf')
 
     # End timing and output the total processing time
-    stop_time = timeit.default_timer()
+    stop_time = timeit.default_ztimer()
     print("Processing time: {:.2f}s".format(stop_time - start_time))
