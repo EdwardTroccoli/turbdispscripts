@@ -15,7 +15,7 @@ from cfpack import print, stop
 import cfpack as cfp
 
 # === define simulations to work on ===
-sim_paths = ["../N512M0p2HDRe2500/", "../N512M5HDRe2500/"]
+sim_paths = ["../N256M0p2HDRe2500/"]
 # =====================================
 
 # create figure output path
@@ -47,29 +47,30 @@ if hostname.find("setonix") != -1 or hostname.find("nid") != -1:
 if hostname.find("sng.lrz.de") != -1:
     mpicmd = 'mpiexec -n '
 
-
-def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False):
-    from cfpack.mpi import MPI, comm, nPE, myPE
+def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False, fix_neg=True):
+    from cfpack.mpi import MPI, comm, myPE
     import flashlib as fl
     norm_ekdr = params(out_path).t_turb / params(out_path).Mach**2 # EKDR norm
     fname_pkl = out_path+os.path.basename(filename)+"_ekdr_vs_size.pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         gg = fl.FlashGG(filename)
-        N = gg.NMax[0]
         dr = gg.D[0][0]
         half_diag = 0.5*np.sqrt(3)
         nbins_r = int(np.ceil(half_diag/dr))
-        bins = [nbins_r, 1000]
-        bin_type = ['lin', 'log']
-        range = [[0.0, nbins_r*dr], [-1e10, 1e10]]
+        rad_bins = np.concatenate([[0.0], np.linspace(0.5*dr, (nbins_r-0.5)*dr, num=nbins_r)])
+        ekdr_bins = cfp.symlogspace(-1e20, 1e20, lin_thresh=1e-30, num_lin=3, num=2*1000+3)
+        bins = [rad_bins, ekdr_bins]
         minmax_obj = gg.GetMinMax("ekdr")
         centre = minmax_obj.max_loc
         print("min, max, max_loc = ", minmax_obj.min, minmax_obj.max, centre)
-        if minmax_obj.min < range[1][0] or minmax_obj.max > range[1][1]:
-            print("Bin range for EKDR is too small!", error=True)
-        bs = gg.binned_statistic(x="radius", y="ekdr", centre=centre, statistic='sum', bins=bins, bin_type=bin_type, range=range)
+        bs = gg.binned_statistic(x="radius", y="ekdr", centre=centre, statistic='sum', bins=bins)
+        stop()
         # get cumulative distribution and normalise by number of cells and by the EKDR unit
-        bs.y = np.nancumsum(bs.y) / np.prod(gg.NMax) * norm_ekdr
+        if fix_neg:
+            bs.y = np.nancumsum( bs.y * (bs.y > 0) )
+        else:
+            bs.y = np.nancumsum(bs.y)
+        bs.y = bs.y * norm_ekdr / np.prod(gg.NMax) # normalise
         if myPE == 0: # only the master PE writes
             # save the data to file
             with open(fname_pkl, "wb") as fobj:
@@ -82,7 +83,7 @@ def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False):
     return ret
 
 def get_ekdr_size_fractal_dim(path, overwrite=False):
-    from cfpack.mpi import MPI, comm, nPE, myPE
+    from cfpack.mpi import myPE
     # compute ekdr vs. size
     print(f'Computing kinetic energy dissipation rate vs. size for fractal dimension analysis for: {path}', color='cyan')
     # create file output dir
@@ -94,22 +95,23 @@ def get_ekdr_size_fractal_dim(path, overwrite=False):
     fname_pkl = out_path+"aver_ekdr_vs_size.pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         bs_y = []
-        dump_range = [20, 100]
+        dump_range = [28, 28]
         for d in range(dump_range[0], dump_range[1]+1, 1):
             filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
             bs = compute_ekdr_size_fractal_dim_file(out_path, path+filename, overwrite=overwrite)
             bs_y.append(bs.y)
         # setup a class to store edges and the averaged pdf data.
         class bsdat:
-            y = np.exp(np.mean(np.log(np.stack(bs_y, axis=0)), axis=0))
-            x = bs.xc
+            def __init__(self, x_, y_):
+                self.x = x_
+                self.y = y_
         if myPE == 0: # only the master rank writes to disk
             with open(fname_pkl, "wb") as fobj:
                 print("Writing '"+fname_pkl+"' averged over dump range:", dump_range, color="magenta")
-                dill.dump(bsdat, fobj)
-    else:
-        print("Read '"+fname_pkl+"'", color="green")
-        bsdat = dill.load(open(fname_pkl, "rb"))
+                bsobj = bsdat(bs.xc, np.exp(np.mean(np.log(np.stack(bs_y, axis=0)), axis=0)))
+                dill.dump(bsobj, fobj)
+    print("Read '"+fname_pkl+"'", color="green")
+    bsdat = dill.load(open(fname_pkl, "rb"))
     # return averaged 2D PDF
     return bsdat
 
@@ -318,4 +320,5 @@ if __name__ == "__main__":
     if args.compute_ekdr_size:
         for path in sim_paths:
             bs = get_ekdr_size_fractal_dim(path, overwrite=args.overwrite)
+            stop()
 
