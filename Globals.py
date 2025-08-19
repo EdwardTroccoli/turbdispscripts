@@ -64,7 +64,6 @@ def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False, fix_
         centre = minmax_obj.max_loc
         print("min, max, max_loc = ", minmax_obj.min, minmax_obj.max, centre)
         bs = gg.binned_statistic(x="radius", y="ekdr", centre=centre, statistic='sum', bins=bins)
-        stop()
         # get cumulative distribution and normalise by number of cells and by the EKDR unit
         if fix_neg:
             bs.y = np.nancumsum( bs.y * (bs.y > 0) )
@@ -83,7 +82,7 @@ def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False, fix_
     return ret
 
 def get_ekdr_size_fractal_dim(path, overwrite=False):
-    from cfpack.mpi import MPI, myPE
+    from cfpack.mpi import MPI, comm, myPE
     # compute ekdr vs. size
     print(f'Computing kinetic energy dissipation rate vs. size for fractal dimension analysis for: {path}', color='cyan')
     # create file output dir
@@ -95,7 +94,7 @@ def get_ekdr_size_fractal_dim(path, overwrite=False):
     fname_pkl = out_path+"aver_ekdr_vs_size.pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
         bs_y = []
-        dump_range = [28, 28]
+        dump_range = [20, 100]
         for d in range(dump_range[0], dump_range[1]+1, 1):
             filename = "Turb_hdf5_plt_cnt_{:04d}".format(d)
             bs = compute_ekdr_size_fractal_dim_file(out_path, path+filename, overwrite=overwrite)
@@ -321,5 +320,4 @@ if __name__ == "__main__":
     if args.compute_ekdr_size:
         for path in sim_paths:
             bs = get_ekdr_size_fractal_dim(path, overwrite=args.overwrite)
-            stop()
 
