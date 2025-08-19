@@ -83,7 +83,7 @@ def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False, fix_
     return ret
 
 def get_ekdr_size_fractal_dim(path, overwrite=False):
-    from cfpack.mpi import myPE
+    from cfpack.mpi import MPI, myPE
     # compute ekdr vs. size
     print(f'Computing kinetic energy dissipation rate vs. size for fractal dimension analysis for: {path}', color='cyan')
     # create file output dir
@@ -110,6 +110,7 @@ def get_ekdr_size_fractal_dim(path, overwrite=False):
                 print("Writing '"+fname_pkl+"' averged over dump range:", dump_range, color="magenta")
                 bsobj = bsdat(bs.xc, np.exp(np.mean(np.log(np.stack(bs_y, axis=0)), axis=0)))
                 dill.dump(bsobj, fobj)
+    if MPI: comm.Barrier()
     print("Read '"+fname_pkl+"'", color="green")
     bsdat = dill.load(open(fname_pkl, "rb"))
     # return averaged 2D PDF
