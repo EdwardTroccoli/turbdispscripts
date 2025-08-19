@@ -14,7 +14,6 @@ import argparse
 import matplotlib.pyplot as plt
 cfp.import_matplotlibrc(fontscale=0.8)
 
-
 def plot_variable():
 
     #set defaults for quick visualisation plots
