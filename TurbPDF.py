@@ -11,7 +11,6 @@ from cfpack.defaults import *
 from turblib import aver_pdf, write_pdf, read_pdf
 from Globals import *
 import glob
-cfp.import_matplotlibrc(fontscale=0.8)
 
 # computes 1d_pdfs using C++ pdfs function
 def compute_1d_pdf(filename, variable):
