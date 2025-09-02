@@ -57,15 +57,15 @@ def make_paper_plots():
                                 color=color[isim], linestyle=linestyle[isim], legend_formatter=lf
                                 )
             ax = ret.ax()
-            ax.axvline(x=l_nu[0], color='red', linewidth = 0.5, linestyle = "dotted")
+            ax.axvline(x=l_nu[0], color='green', linewidth = 0.7, linestyle = "dotted")
             ax.axvspan(l_nu[1], l_nu[2], color='blue', alpha=0.4, linewidth=0)
             cfp.plot(x=l_nu_pos_x, y=l_nu_pos_y, ax=ret.ax(),
-                    text=r'$\ell_{\nu}$', normalised_coords=True)
+                    text=r'$\ell_{\nu}$', color='green', normalised_coords=True)
             if mach > 1:
-                ax.axvline(x=l_s[0], color='brown', linestyle = "dotted")
+                ax.axvline(x=l_s[0], color='brown', linewidth = 0.7, linestyle = "dotted")
                 ax.axvspan(l_s[1], l_s[2], color='pink', alpha=0.7, linewidth=0)
                 cfp.plot(x=0.51, y=0.78, ax=ret.ax(),
-                    text=r'$\ell_{s}$', normalised_coords=True)
+                    text=r'$\ell_{s}$', color = "brown", normalised_coords=True)
 
             r = np.logspace(-3.5, -3)
             r0, y0 = 1e-3, 10**(-0.5)
