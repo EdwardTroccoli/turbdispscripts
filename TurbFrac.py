@@ -11,21 +11,33 @@ import numpy as np
 import matplotlib.pyplot as plt
 import flashlib as fl
 
-
 def make_paper_plots():
         machs = [0.2, 5]
         for imach, mach in enumerate(machs):
+            Re = 2500
+            k_turb = 2
+            Re_coe_sub = np.array([0.10, 0.01])
+            Re_coe_sup = np.array([0.33, 0.01])
             if mach == 0.2:
-                sims = ["N1024M0p2HDRe2500", "N512M0p2HDRe2500", "N256M0p2HDRe2500"]
+                sims = ["N2048M0p2HDRe2500HP","N1024M0p2HDRe2500", "N512M0p2HDRe2500", "N256M0p2HDRe2500"]
                 MachNum = '0p2'
                 MachSim = 'Sub'
+                l_nu = 1/(np.array([Re_coe_sub[0], Re_coe_sub[0]+Re_coe_sub[1], Re_coe_sub[0]-Re_coe_sub[1]])*Re**(3/4)*k_turb)
+                l_nu_pos_x = 0.56
+                l_nu_pos_y = 0.78
             if mach == 5:
-                sims = ["N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
+                sims = ["N2048M5HDRe2500HP", "N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
                 MachNum = '5'
-                MachSim = 'Sup' 
+                MachSim = 'Sup'
+                phi = np.array([0.42, 0.09, 0.12])
+                psup = np.array([0.49, 0.01, 0.01])
+                l_nu = 1/(np.array([Re_coe_sup[0], Re_coe_sup[0]+Re_coe_sup[1], Re_coe_sup[0]-Re_coe_sup[1]])*Re**(2/3)*k_turb)
+                l_s = [(1/k_turb)*phi[0]*mach**(-1/psup[0]), (1/k_turb)*(phi[0]-phi[1])*mach**(-1/(psup[0]-psup[1])), (1/k_turb)*(phi[0]+phi[2])*mach**(-1/(psup[0]+psup[2]))]
+                l_nu_pos_x = 0.51
+                l_nu_pos_y = 0.85
             color = ['black', 'magenta', 'green', 'grey']
             linestyle = ['solid', 'dashed', 'dashdot', 'dotted']
-            dy = [0.1, 0.1, 0.1]
+            dy = [0.1, 0.1, 0.1, 0.1]
             # loop over simulations
             for isim, sim in enumerate(sims):
                 # get sim parameters
@@ -43,15 +55,29 @@ def make_paper_plots():
                 lf = cfp.legend_formatter(pos=(xpos, ypos+isim*dy[isim]), length=length)
                 ret = cfp.plot(x=bsdat.x, y=bsdat.y, label=MachSim+str(N),
                                 color=color[isim], linestyle=linestyle[isim], legend_formatter=lf
-                                )                
-            # add Mach label
-            #cfp.plot(x=0.75, y=0.95, text=rf"$\mathcal{{M}} = {mach}$", normalised_coords=True)
-            #create final plot
+                                )
+            ax = ret.ax()
+            ax.axvline(x=l_nu[0], color='red', linewidth = 0.5, linestyle = "dotted")
+            ax.axvspan(l_nu[1], l_nu[2], color='blue', alpha=0.4, linewidth=0)
+            cfp.plot(x=l_nu_pos_x, y=l_nu_pos_y, ax=ret.ax(),
+                    text=r'$\ell_{\nu}$', normalised_coords=True)
+            if mach > 1:
+                ax.axvline(x=l_s[0], color='brown', linestyle = "dotted")
+                ax.axvspan(l_s[1], l_s[2], color='pink', alpha=0.7, linewidth=0)
+                cfp.plot(x=0.51, y=0.78, ax=ret.ax(),
+                    text=r'$\ell_{s}$', normalised_coords=True)
+
+            r = np.logspace(-3.5, -3)
+            r0, y0 = 1e-3, 10**(-0.5)
+            dy = 0.075
             for i in range(1,4):
-                xpos, ypos, length, dy = 0.55, 0.1, 1.4, 0.1
-                lf = cfp.legend_formatter(pos=(xpos, ypos+i*dy), length=length)
-                cfp.plot(x=bsdat.x, y=bsdat.x**i, label=rf'$\propto r^{i}$', legend_formatter=lf)
-            cfp.plot(xlabel="Radius", ylabel=ylabel, xlog=True, ylog=True, save=fig_path+"ekdr_vs_size_frac_dim_M"+MachStr+".pdf")
+                cfp.plot(x=0.04, y=0.93 - i*dy, ax=ret.ax(),
+                        text=rf'$\sim r^{i}$', normalised_coords=True)
+                C = y0 / (r0**i)
+                y = C * r**i
+                cfp.plot(x=r, y=y)
+
+            cfp.plot(xlabel="Radius", ylim=[1e-8,1e0], ylabel=ylabel, xlog=True, ylog=True, save=fig_path+"ekdr_vs_size_frac_dim_M"+MachStr+".pdf")
 
 if __name__ == "__main__":
 
@@ -61,22 +87,12 @@ if __name__ == "__main__":
     parser.add_argument("-ov", "--overwrite", action='store_true', default=False, help="Overwrite files")
     args = parser.parse_args()
 
-
     # Start timing the process
     start_time = timeit.default_timer()
 
     # loop over simulations
     if args.paper_plots:
         make_paper_plots()
-
-    if args.overwrite:
-        out_path = sim_paths[0] + "FracDim/"
-        dump_range = [20,100]
-        ydat = []
-        for d in range(dump_range[0], dump_range[1]+1, 1):
-            filename = out_path+"Turb_hdf5_plt_cnt_{:04d}_ekdr_vs_size.pkl".format(d)
-            bsdat = dill.load(open(filename, "rb"))
-            print(filename,bsdat.y[0])
     else:
         for i, path in enumerate(sim_paths):
 
