@@ -20,8 +20,8 @@ def plot_variable():
     log = True
     cmap = 'afmhot'
     cmap_label = None
-    xlabel, ylabel = r'$x$', r'$y$'
-    vmin, vmax = None, None
+    xlabel, ylabel = None, None #r'$x$', r'$y$'
+    vmin, vmax = 1e-4, 1e3
     remove_x_ticks, remove_y_ticks = None, None
 
     if '0p2' in out_path:
@@ -79,11 +79,11 @@ def plot_variable():
             cmap = 'BuPu'
             var = hdfio.read(filen, "ekdr_slice_xy")*(t_turb/Mach**2)
             cmap_label = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
-
+            cmap_label = None
         # Define formatted filename correctly
         #out_file = out_path+f"frame_{variable}_{i:06d}.png"
         out_file = out_path+f"frame_{variable}_000250_M{MachNum}.pdf"
-        plot_frame()
+        plot_frame(var)
 
 def make_paper_plots():
     
