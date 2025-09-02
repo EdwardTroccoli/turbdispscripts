@@ -49,7 +49,7 @@ if hostname.find("sng.lrz.de") != -1:
 
 def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False, fix_neg=True):
     from cfpack.mpi import MPI, comm, myPE
-    import flashlib as fl
+    from cfflash import flashlib as fl
     norm_ekdr = params(out_path).t_turb / params(out_path).Mach**2 # EKDR norm
     fname_pkl = out_path+os.path.basename(filename)+"_ekdr_vs_size.pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
@@ -63,7 +63,7 @@ def compute_ekdr_size_fractal_dim_file(out_path, filename, overwrite=False, fix_
         minmax_obj = gg.GetMinMax("ekdr")
         centre = minmax_obj.max_loc
         print("min, max, max_loc = ", minmax_obj.min, minmax_obj.max, centre)
-        bs = gg.binned_statistic(x="radius", y="ekdr", centre=centre, statistic='sum', bins=bins)
+        bs = gg.binned_statistic(x="radius", y="ekdr", centre=centre, statistic='sum', bins=bins, use_hist = False)
         # get cumulative distribution and normalise by number of cells and by the EKDR unit
         if fix_neg:
             bs.y = np.nancumsum( bs.y * (bs.y > 0) )
