@@ -11,7 +11,6 @@ from cfpack.defaults import *
 from turblib import aver_spect, write_spect, read_spect
 from Globals import *
 import glob
-cfp.import_matplotlibrc(fontscale=0.8)
 
 # plotting function for spectras
 def plot_spectra(dat, var, Mach,save=False):
@@ -94,8 +93,8 @@ def make_paper_plots():
                     axes_format=['', None]
                     legend_formatter = None
                     label = None
-                    if Mach == 0.2: 
-                        ylim = [1e-10,1e-1]
+                    if Mach == 0.2: ylim = [1e-10,1e-1]
+                    if Mach == 5: ylim = [1e-2,1e2]
                 if var == 'ekdr': 
                     axes_format=[None, None]
                     compensation_factor = 1
@@ -165,5 +164,5 @@ if __name__ == "__main__":
                 plot_spectra(spectra_dat, var, Mach,save=fig_path+'aver_spectra'+ "_" + var + "_" + "M" +MachNum +'.pdf')
 
     # End timing and output the total processing time
-    stop_time = timeit.default_ztimer()
+    stop_time = timeit.default_timer()
     print("Processing time: {:.2f}s".format(stop_time - start_time))
