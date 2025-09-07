@@ -9,7 +9,6 @@ import os
 import cfpack as cfp
 from cfpack.defaults import *
 from Globals import *
-cfp.import_matplotlibrc(fontscale=0.8)
 from matplotlib import rcParams
 
 
@@ -42,7 +41,7 @@ def plot_var(path, dat, variable):
 
 def make_paper_plots():
     # loop over figures
-    figs = ["Time_evol_injr_ekdr", "Time_correlation", "Time_evol_Mach"]
+    figs = ["Time_evol_correlation", "Time_evol_injr_ekdr", "Time_evol_Mach"]
     for fig in figs:
         # loop over Mach numbers
         machs = [0.2, 5]
@@ -92,7 +91,7 @@ def make_paper_plots():
                         cfp.plot(x=time, y=injr, label = MachSim+str(N), color='blue', legend_formatter=lf)#label=r'$\varepsilon_{\mathrm{inj}}$'
                         cfp.plot(x=0.022, y=ypos-0.1, text=r"$\varepsilon_{\mathrm{inj}}$:", normalised_coords=True)
                         cfp.plot(x=0.022, y=ypos, text=r"$\varepsilon_{\mathrm{kin}}$:", normalised_coords=True)
-                if fig == 'Time_correlation':
+                if fig == 'Time_evol_correlation':
                     if N==2048:
                         injr = dat['#41_injection_rate'] * t_turb / Mach**2
                         ekdr = dat['#42_ekin_diss_rate'] * t_turb / Mach**2
@@ -108,12 +107,16 @@ def make_paper_plots():
                             L2s.append((np.std(injr_int[:-ishift]-ekdr_int[ishift:])/np.mean(injr_int[:-ishift]))**2)
                         tshifts = np.array(tshifts); L2s=np.array(L2s)
                         ret = cfp.plot(x=tshifts, y=L2s, color='black')
+                        ax = ret.ax()
+                        ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes, fontsize=14, color='black',
+                                verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
                         ylim = [0, 0.35]
                         xlabel = r'$\Delta t/t_{\mathrm{turb}}$'
-                        ylabel = r'$\ell^2$ norm of $\varepsilon_{\mathrm{kin}}-\varepsilon_{\mathrm{inj}}$'
+                        if Mach == 0.2: ylabel = r'$\vert\vert(\varepsilon_{\mathrm{kin}},\varepsilon_{\mathrm{inj}})\vert\vert_{\ell^2}$'
                         # print optimal time shift for max correlation
                         tshift_max_correlation = tshifts[L2s==L2s.min()]
                         print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation, color='yellow')
+                        break
             if remove_x_ticks:
                 ax = ret.ax()
                 ax.set_xticklabels([])
