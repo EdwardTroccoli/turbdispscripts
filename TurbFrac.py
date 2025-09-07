@@ -23,8 +23,9 @@ def make_paper_plots():
                 MachNum = '0p2'
                 MachSim = 'Sub'
                 l_nu = 1/(np.array([Re_coe_sub[0], Re_coe_sub[0]+Re_coe_sub[1], Re_coe_sub[0]-Re_coe_sub[1]])*Re**(3/4)*k_turb)
-                l_nu_pos_x = 0.56
-                l_nu_pos_y = 0.78
+                l_nu_pos_x = 0.55
+                l_nu_pos_y = 0.18
+                ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
             if mach == 5:
                 sims = ["N2048M5HDRe2500HP", "N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
                 MachNum = '5'
@@ -34,7 +35,8 @@ def make_paper_plots():
                 l_nu = 1/(np.array([Re_coe_sup[0], Re_coe_sup[0]+Re_coe_sup[1], Re_coe_sup[0]-Re_coe_sup[1]])*Re**(2/3)*k_turb)
                 l_s = [(1/k_turb)*phi[0]*mach**(-1/psup[0]), (1/k_turb)*(phi[0]-phi[1])*mach**(-1/(psup[0]-psup[1])), (1/k_turb)*(phi[0]+phi[2])*mach**(-1/(psup[0]+psup[2]))]
                 l_nu_pos_x = 0.51
-                l_nu_pos_y = 0.85
+                l_nu_pos_y = 0.15
+                ylabel = None
             color = ['black', 'magenta', 'green', 'grey']
             linestyle = ['solid', 'dashed', 'dashdot', 'dotted']
             dy = [0.1, 0.1, 0.1, 0.1]
@@ -47,24 +49,23 @@ def make_paper_plots():
                 if Mach == 0.2: MachStr = '0p2'
                 if Mach == 5:   MachStr = '5'
                 # read data
-                ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
                 bsdat = get_ekdr_size_fractal_dim("../"+sim+"/")
 
-                # plot
+                # plotting
                 xpos, ypos, length = 0.7, 0.1, 1.4
                 lf = cfp.legend_formatter(pos=(xpos, ypos+isim*dy[isim]), length=length)
                 ret = cfp.plot(x=bsdat.x, y=bsdat.y, label=MachSim+str(N),
                                 color=color[isim], linestyle=linestyle[isim], legend_formatter=lf
                                 )
             ax = ret.ax()
-            ax.axvline(x=l_nu[0], color='green', linewidth = 0.7, linestyle = "dotted")
-            ax.axvspan(l_nu[1], l_nu[2], color='blue', alpha=0.4, linewidth=0)
+            ax.axvline(x=l_nu[0], color='purple', linewidth = 0.7, linestyle = "dotted")
+            ax.axvspan(l_nu[1], l_nu[2], color='purple', alpha=0.4, linewidth=0)
             cfp.plot(x=l_nu_pos_x, y=l_nu_pos_y, ax=ret.ax(),
                     text=r'$\ell_{\nu}$', color='green', normalised_coords=True)
             if mach > 1:
-                ax.axvline(x=l_s[0], color='brown', linewidth = 0.7, linestyle = "dotted")
-                ax.axvspan(l_s[1], l_s[2], color='pink', alpha=0.7, linewidth=0)
-                cfp.plot(x=0.51, y=0.78, ax=ret.ax(),
+                ax.axvline(x=l_s[0], color='orange', linewidth = 0.7, linestyle = "dotted")
+                ax.axvspan(l_s[1], l_s[2], color='orange', alpha=0.4, linewidth=0)
+                cfp.plot(x=0.51, y=0.21, ax=ret.ax(),
                     text=r'$\ell_{s}$', color = "brown", normalised_coords=True)
 
             r = np.logspace(-3.5, -3)
@@ -72,12 +73,12 @@ def make_paper_plots():
             dy = 0.075
             for i in range(1,4):
                 cfp.plot(x=0.04, y=0.93 - i*dy, ax=ret.ax(),
-                        text=rf'$\sim r^{i}$', normalised_coords=True)
+                        text=rf'$\sim r^{i}$',normalised_coords=True)
                 C = y0 / (r0**i)
                 y = C * r**i
-                cfp.plot(x=r, y=y)
+                cfp.plot(x=r, y=y, color = "magenta")
 
-            cfp.plot(xlabel="Radius", ylim=[1e-8,1e0], ylabel=ylabel, xlog=True, ylog=True, save=fig_path+"ekdr_vs_size_frac_dim_M"+MachStr+".pdf")
+            ret = cfp.plot(xlabel=r"$\ell/L$", ylabel=ylabel, ylim=[1e-8,1e0], xlog=True, ylog=True, save=fig_path+"ekdr_vs_size_frac_dim_M"+MachStr+".pdf")
 
 if __name__ == "__main__":
 
