@@ -23,8 +23,10 @@ def make_paper_plots():
                 MachNum = '0p2'
                 MachSim = 'Sub'
                 l_nu = 1/(np.array([Re_coe_sub[0], Re_coe_sub[0]+Re_coe_sub[1], Re_coe_sub[0]-Re_coe_sub[1]])*Re**(3/4)*k_turb)
-                l_nu_pos_x = 0.55
-                l_nu_pos_y = 0.18
+                l_nu_pos_x = 0.57
+                l_nu_pos_y = 0.12
+                fit_pos_x = 0.60
+                fit_pos_y = 0.49
                 ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
             if mach == 5:
                 sims = ["N2048M5HDRe2500HP", "N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
@@ -34,8 +36,10 @@ def make_paper_plots():
                 psup = np.array([0.49, 0.01, 0.01])
                 l_nu = 1/(np.array([Re_coe_sup[0], Re_coe_sup[0]+Re_coe_sup[1], Re_coe_sup[0]-Re_coe_sup[1]])*Re**(2/3)*k_turb)
                 l_s = [(1/k_turb)*phi[0]*mach**(-1/psup[0]), (1/k_turb)*(phi[0]-phi[1])*mach**(-1/(psup[0]-psup[1])), (1/k_turb)*(phi[0]+phi[2])*mach**(-1/(psup[0]+psup[2]))]
-                l_nu_pos_x = 0.51
-                l_nu_pos_y = 0.15
+                l_nu_pos_x = 0.53
+                l_nu_pos_y = 0.12
+                fit_pos_x = 0.55
+                fit_pos_y = 0.62
                 ylabel = None
             color = ['black', 'magenta', 'green', 'grey']
             linestyle = ['solid', 'dashed', 'dashdot', 'dotted']
@@ -57,23 +61,44 @@ def make_paper_plots():
                 ret = cfp.plot(x=bsdat.x, y=bsdat.y, label=MachSim+str(N),
                                 color=color[isim], linestyle=linestyle[isim], legend_formatter=lf
                                 )
+                if N == 2048: # Only run for this sim res
+                    # Line fitting around the dissipation scale
+                    def model(x, a, b):
+                        return a*x**b
+
+                    # Sample relevant data
+                    factor = np.sqrt(3) # Goes sqrt(3) below and above of what l_nu is
+                    good_ind = (bsdat.x >= l_nu[0]/factor) & (bsdat.x <= l_nu[0]*factor)
+                    bsdat.x = bsdat.x[good_ind]
+                    bsdat.y = bsdat.y[good_ind]
+
+                    # Call fitting function
+                    res = cfp.fit(model, bsdat.x, bsdat.y)
+                    # Plot the result
+                    scale_factor = [1e-1, 8e-1]
+                    ret = cfp.plot(x = bsdat.x, y=scale_factor[imach]*bsdat.x**res.popt[1], color = color[isim])
+                    cfp.plot(
+                        x=fit_pos_x, y=fit_pos_y, ax=ret.ax(),
+                        text=fr'$\propto \ell^{{{res.popt[1]:.2f}}}$',
+                        color=color[isim], normalised_coords=True
+                    )
             ax = ret.ax()
-            ax.axvline(x=l_nu[0], color='purple', linewidth = 0.7, linestyle = "dotted")
-            ax.axvspan(l_nu[1], l_nu[2], color='purple', alpha=0.4, linewidth=0)
+            ax.axvline(x=l_nu[0], color='darkseagreen', linewidth = 0.9, linestyle = "dotted")
+            ax.axvspan(l_nu[1], l_nu[2], color='darkseagreen', alpha=0.1, linewidth=0)
             cfp.plot(x=l_nu_pos_x, y=l_nu_pos_y, ax=ret.ax(),
-                    text=r'$\ell_{\nu}$', color='green', normalised_coords=True)
+                    text=r'$\ell_{\nu}$', color='darkseagreen', normalised_coords=True)
             if mach > 1:
-                ax.axvline(x=l_s[0], color='orange', linewidth = 0.7, linestyle = "dotted")
-                ax.axvspan(l_s[1], l_s[2], color='orange', alpha=0.4, linewidth=0)
-                cfp.plot(x=0.51, y=0.21, ax=ret.ax(),
-                    text=r'$\ell_{s}$', color = "brown", normalised_coords=True)
+                ax.axvline(x=l_s[0], color='darkgoldenrod', linewidth = 0.9, linestyle = "dotted")
+                ax.axvspan(l_s[1], l_s[2], color='darkgoldenrod', alpha=0.1, linewidth=0)
+                cfp.plot(x=0.39, y=0.12, ax=ret.ax(),
+                    text=r'$\ell_{s}$', color = "darkgoldenrod", normalised_coords=True)
 
             r = np.logspace(-3.5, -3)
             r0, y0 = 1e-3, 10**(-0.5)
             dy = 0.075
             for i in range(1,4):
                 cfp.plot(x=0.04, y=0.93 - i*dy, ax=ret.ax(),
-                        text=rf'$\sim r^{i}$',normalised_coords=True)
+                        text=rf'$\propto \ell^{i}$',normalised_coords=True)
                 C = y0 / (r0**i)
                 y = C * r**i
                 cfp.plot(x=r, y=y, color = "magenta")
