@@ -12,7 +12,6 @@ from cfpack.defaults import *
 from Globals import *
 import argparse
 import matplotlib.pyplot as plt
-cfp.import_matplotlibrc(fontscale=0.8)
 
 def plot_variable():
 
@@ -102,7 +101,7 @@ def make_paper_plots():
         cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, color='white', normalised_coords=True, save=out_file)#text=r"$t/t_\mathrm{turb}="+time_str+r"$",
     
     # loop over figures
-    vars = ['dens', 'vort', 'ekdr']
+    vars = ['ekdr', 'dens'] #'vort'
     for variable in vars:
         # loop over Mach numbers
         machs = [0.2, 5]
@@ -167,13 +166,11 @@ def make_paper_plots():
                             cmap = 'BuPu'
                             vmin,vmax = 1e-4, 1e3
                             var = hdfio.read(filen, "ekdr_slice_xy")*(t_turb/Mach**2)
-                            if '0p2' in out_path:
-                                 ylabel = r'$y$'
-                            elif '5' in out_path:
+                            if 'M5' in out_path:
                                 ylabel = None
                                 cmap_label = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
                                 remove_y_ticks = True
-                        out_file = out_path+f"frame_{variable}_000250_M{MachNum}_{N}.pdf"
+                        out_file = fig_path+f"frame_{variable}_000250_M{MachNum}_{N}.pdf"
                         plot_variable()
                         
 
