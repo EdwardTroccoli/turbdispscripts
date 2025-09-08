@@ -116,7 +116,6 @@ def make_paper_plots():
                         # print optimal time shift for max correlation
                         tshift_max_correlation = tshifts[L2s==L2s.min()]
                         print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation, color='yellow')
-                        break
             if remove_x_ticks:
                 ax = ret.ax()
                 ax.set_xticklabels([])
