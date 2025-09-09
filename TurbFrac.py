@@ -10,6 +10,7 @@ import cfpack as cfp
 import numpy as np
 import matplotlib.pyplot as plt
 import flashlib as fl
+from scipy.stats import linregress
 
 def make_paper_plots():
         machs = [0.2, 5]
@@ -63,28 +64,28 @@ def make_paper_plots():
                                 )
                 if N == 2048: # Only run for this sim res
                     # Line fitting around the dissipation scale
-                    def model(x, a, b):
-                        return a*x**b
+                    def model(x, a,b):
+                        return a*x+b
 
                     # Sample relevant data
                     factor = np.sqrt(3) # Goes sqrt(3) below and above of what l_nu is
-                    good_ind = (bsdat.x >= l_nu[0]/factor) & (bsdat.x <= l_nu[0]*factor)
+                    good_ind = ((bsdat.x >= l_nu[0]/factor) & (bsdat.x <= l_nu[0]*factor))
                     bsdat.x = bsdat.x[good_ind]
                     bsdat.y = bsdat.y[good_ind]
-
+                    guesses = {'a': [1, 1.0, 3],'b': [-10.0, 1.0, 10.0]}
                     # Call fitting function
-                    res = cfp.fit(model, bsdat.x, bsdat.y)
+                    res = cfp.fit(model, np.log(bsdat.x), np.log(bsdat.y), params=guesses)
                     # Plot the result
                     scale_factor = [1e-1, 8e-1]
-                    ret = cfp.plot(x = bsdat.x, y=scale_factor[imach]*bsdat.x**res.popt[1], color = color[isim])
+                    ret = cfp.plot(x = bsdat.x, y=scale_factor[imach]*bsdat.x**res.popt[0], color = color[isim])
                     cfp.plot(
                         x=fit_pos_x, y=fit_pos_y, ax=ret.ax(),
-                        text=fr'$\propto \ell^{{{res.popt[1]:.2f}}}$',
+                        text=fr'$\propto \ell^{{{res.popt[0]:.1f}}}$',
                         color=color[isim], normalised_coords=True
                     )
             ax = ret.ax()
             ax.axvline(x=l_nu[0], color='darkseagreen', linewidth = 0.9, linestyle = "dotted")
-            ax.axvspan(l_nu[1], l_nu[2], color='darkseagreen', alpha=0.1, linewidth=0)
+            ax.axvspan(l_nu[1], l_nu[2], color='darkseagreen', alpha=0.3, linewidth=0)
             cfp.plot(x=l_nu_pos_x, y=l_nu_pos_y, ax=ret.ax(),
                     text=r'$\ell_{\nu}$', color='darkseagreen', normalised_coords=True)
             if mach > 1:
