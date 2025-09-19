@@ -7,10 +7,10 @@ import numpy as np
 import timeit
 import os, time
 import cfpack as cfp
-from cfpack.defaults import *
 from turblib import aver_spect, write_spect, read_spect
 from Globals import *
 import glob
+cfp.load_plot_style() # to load cfpack plot style
 
 # plotting function for spectras
 def plot_spectra(dat, var, Mach,save=False):
@@ -41,21 +41,31 @@ def plot_spectra(dat, var, Mach,save=False):
 
 def make_paper_plots():
     # loop over figures
-    vars = ["sqrtrho", "ekdr", "vels"]
+    vars = ["vels", "ekdr"] # Option for sqrtrho as well, but not used for the paper
     for ivar, var in enumerate(vars):
         # loop over Mach numbers
         machs = [0.2, 5]
+        Re = 2500
+        k_turb = 2
+        Re_coe_sub = np.array([0.10, 0.01])
+        Re_coe_sup = np.array([0.33, 0.01])
         for imach, mach in enumerate(machs):
             if mach == 0.2:
                 sims = ["N2048M0p2HDRe2500HP", "N1024M0p2HDRe2500", "N512M0p2HDRe2500", "N256M0p2HDRe2500"]
                 MachNum = '0p2'
                 MachSim = 'Sub'
-                compensation = '5/3'
+                compensation = '1.6'
+                k_nu = (np.array([Re_coe_sub[0], Re_coe_sub[0]-Re_coe_sub[1], Re_coe_sub[0]+Re_coe_sub[1]])*Re**(3/4)*k_turb)
+                k_nu_pos_x = 0.55
+                k_nu_pos_y = 0.12
             if mach == 5:
                 sims = ["N2048M5HDRe2500HP", "N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
                 MachNum = '5'
                 MachSim = 'Sup'
-                compensation = '2'   
+                compensation = '2.2'
+                k_nu = (np.array([Re_coe_sup[0], Re_coe_sup[0]-Re_coe_sup[1], Re_coe_sup[0]+Re_coe_sup[1]])*Re**(2/3)*k_turb)
+                k_nu_pos_x = 0.59
+                k_nu_pos_y = 0.12
             color = ['black', 'magenta', 'green', 'grey']
             linestyle = ['solid', 'dashed', 'dashdot', 'dotted']
             dx = [0, 0.24, 0.24, 0.235]
@@ -93,12 +103,16 @@ def make_paper_plots():
                     axes_format=['', None]
                     legend_formatter = None
                     label = None
+                    phi = np.array([0.42, 0.09, 0.12])
+                    psup = np.array([0.49, 0.01, 0.01])
+                    k_turb = 2
+                    l_s = 1/np.array([(1/k_turb)*phi[0]*mach**(-1/psup[0]), (1/k_turb)*(phi[0]-phi[1])*mach**(-1/(psup[0]-psup[1])), (1/k_turb)*(phi[0]+phi[2])*mach**(-1/(psup[0]+psup[2]))])
                     if Mach == 0.2: ylim = [1e-10,1e-1]
                     if Mach == 5: ylim = [1e-2,1e2]
                 if var == 'ekdr': 
                     axes_format=[None, None]
                     compensation_factor = 1
-                    xlabel = r'Wavenumber $k$'
+                    xlabel = r'Wave number $k$'
                     legend_formatter = lf
                     label=MachSim+str(N)
                     ylim = [5e-5,5e0]
@@ -107,10 +121,18 @@ def make_paper_plots():
                 sigyup = 10**(spectra_dat['col6']+spectra_dat['col7'])*norm*compensation_factor - y
                 ret = cfp.plot(x=spectra_dat['col1'], y=y, label=label,
                                 color=color[isim], linestyle=linestyle[isim], legend_formatter=legend_formatter,
-                                yerr=[sigylo, sigyup], shaded_err=[color[isim],0.2])                
-            # add Mach label
-            #cfp.plot(x=0.75, y=0.95, text=rf"$\mathcal{{M}} = {mach}$", normalised_coords=True)
-            #create final plot
+                                yerr=[sigylo, sigyup], shaded_err=[color[isim],0.2])
+                if var == 'vels':
+                    ax = ret.ax()
+                    ax.axvline(x=k_nu[0], color='#d62728', linewidth = 1, linestyle = "dotted")
+                    ax.axvspan(k_nu[1], k_nu[2], color='#d62728', alpha=0.1, linewidth=0)
+                    cfp.plot(x=k_nu_pos_x, y=k_nu_pos_y, ax=ret.ax(),
+                            text=r'$k_{\nu}$', color='#d62728', normalised_coords=True)
+                    if mach > 1:
+                        ax.axvline(x=l_s[0], color='darkgoldenrod', linewidth = 0.9, linestyle = "dotted")
+                        ax.axvspan(l_s[1], l_s[2], color='darkgoldenrod', alpha=0.1, linewidth=0)
+                        cfp.plot(x=0.74, y=0.12, ax=ret.ax(),
+                            text=r'$k_{s}$', color = "darkgoldenrod", normalised_coords=True)
             cfp.plot(axes_format=axes_format, xlabel=xlabel, ylabel=ylabel, xlog=True, ylim=ylim, ylog=True, save=fig_path+"spectra_"+var+"_M"+MachNum+".pdf")
 
 
