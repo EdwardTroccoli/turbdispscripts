@@ -7,10 +7,9 @@ import numpy as np
 import timeit
 import os
 import cfpack as cfp
-from cfpack.defaults import *
 from Globals import *
 from matplotlib import rcParams
-
+cfp.load_plot_style() # to load cfpack plot style
 
 def plot_var(path, dat, variable):
     t_turb = params(path).t_turb
@@ -100,12 +99,24 @@ def make_paper_plots():
                         time_int = np.linspace(0, 10, npts) # interpolated time axis
                         ekdr_int = np.interp(time_int, time, ekdr)
                         injr_int = np.interp(time_int, time, injr)
-                        tshifts = []
-                        L2s = []
-                        for ishift in range(1, 3*npts_per_tturb):
-                            tshifts.append(ishift/npts_per_tturb)
-                            L2s.append((np.std(injr_int[:-ishift]-ekdr_int[ishift:])/np.mean(injr_int[:-ishift]))**2)
-                        tshifts = np.array(tshifts); L2s=np.array(L2s)
+
+                        time_lags = [] # Overall list of the minima of L2 for each interation
+                        for i in range(1,9,2): # Loop such that we look at the region (1,3), (3,5) and so on
+                            tshifts = []
+                            L2s = []
+                            time_int_scan = time_int[i*npts_per_tturb :] # Restrict the domains (remove data that was previously used)
+                            ekdr_int_scan = ekdr_int[i*npts_per_tturb :]
+                            injr_int_scan = injr_int[i*npts_per_tturb :]
+
+                            # Compute L2 norm
+                            for ishift in range(1, 2*npts_per_tturb):
+                                tshifts.append(ishift/npts_per_tturb)
+                                L2s.append((np.std(injr_int_scan[:-ishift]-ekdr_int_scan[ishift:])/np.mean(injr_int_scan[:-ishift]))**2)
+                        
+                            # Append results to time_lags and find the minimal L2 in the tshift range.
+                            tshifts = np.array(tshifts); L2s=np.array(L2s)
+                            time_lags.append(tshifts[L2s==L2s.min()][0])
+
                         ret = cfp.plot(x=tshifts, y=L2s, color='black')
                         ax = ret.ax()
                         ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes, fontsize=14, color='black',
@@ -114,8 +125,11 @@ def make_paper_plots():
                         xlabel = r'$\Delta t/t_{\mathrm{turb}}$'
                         if Mach == 0.2: ylabel = r'$\vert\vert(\varepsilon_{\mathrm{kin}},\varepsilon_{\mathrm{inj}})\vert\vert_{\ell^2}$'
                         # print optimal time shift for max correlation
-                        tshift_max_correlation = tshifts[L2s==L2s.min()]
-                        print('time shift for maximum eps_kin to eps_inj correlation (in t_turb) = ', tshift_max_correlation, color='yellow')
+                        time_lags = np.array(time_lags)
+                        print(
+                            f"time shift for maximum eps_kin → eps_inj correlation (in t_turb) = {time_lags}\n"
+                            f"Result: {time_lags.mean():.3g} ± {time_lags.std():.3g}"
+                        )
             if remove_x_ticks:
                 ax = ret.ax()
                 ax.set_xticklabels([])
