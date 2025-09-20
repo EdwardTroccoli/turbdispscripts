@@ -75,9 +75,9 @@ def make_paper_plots():
                         good_ind = ((bsdat.x >= centre[i]/factor) & (bsdat.x <= centre[i]*factor)) # Sample only relevant region around a factor of sqrt(3) around the centre
                         fitting_range_x = bsdat.x[good_ind] # Extract relevant x data
                         fitting_range_y = bsdat.y[good_ind] # Extract relevant y data
-                        guesses = {'a': [1, 1.0, 3],'b': [-10.0, 1.0, 10.0]} # Define some bounds on guesses (needed for cfp.fit)
 
                         # Call fitting function
+                        guesses = {'a': [1, 1.0, 3],'b': [-10.0, 1.0, 10.0]} # Define some bounds on guesses (needed for cfp.fit)
                         res = cfp.fit(model, np.log(fitting_range_x), np.log(fitting_range_y), params=guesses)
 
                         # Plot the fitted region, with a scaling label
