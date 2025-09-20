@@ -7,10 +7,10 @@ import numpy as np
 import timeit
 import os
 import cfpack as cfp
-from cfpack.defaults import *
 from turblib import aver_pdf, write_pdf, read_pdf
 from Globals import *
 import glob
+cfp.load_plot_style() # to load cfpack plot style
 
 # computes 1d_pdfs using C++ pdfs function
 def compute_1d_pdf(filename, variable):
@@ -139,7 +139,7 @@ def line_fitting(po, xlabel, ylabel, save_output, xlim=None, ylim=None, by_hand_
         print("Drawing by-hand/eye fit with m, t = ", by_hand_fit, color='yellow')
         yfit = 10**linear_func(np.log10(xlim), by_hand_fit[0], by_hand_fit[1]) # by-hand fit
     # plot fit
-    cfp.plot(x=xlim, y=yfit, xlabel=xlabel, ylabel=ylabel, color='black', linewidth=0.5, linestyle=(0, (1, 5)), save=save_output)
+    cfp.plot(x=xlim, y=yfit, xlabel=xlabel, ylabel=ylabel, color='black', linewidth=1, linestyle=(0, (1, 5)), save=save_output)
 
 
 if __name__ == "__main__":
