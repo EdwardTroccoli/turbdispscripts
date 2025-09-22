@@ -15,7 +15,7 @@ from cfpack import print, stop
 import cfpack as cfp
 
 # === define simulations to work on ===
-sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
+sim_paths = ["../N256M0p2HDRe2500/", "../N256M5HDRe2500/","../N512M0p2HDRe2500/", "../N512M5HDRe2500/","../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/","../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
 # =====================================
 
 # create figure output path
@@ -101,13 +101,16 @@ def get_ekdr_size_fractal_dim(path, overwrite=False):
             bs_y.append(bs.y)
         # setup a class to store edges and the averaged pdf data.
         class bsdat:
-            def __init__(self, x_, y_):
+            def __init__(self, x_, y_, y_std_):
                 self.x = x_
                 self.y = y_
+                self.y_std = y_std_ 
         if myPE == 0: # only the master rank writes to disk
             with open(fname_pkl, "wb") as fobj:
                 print("Writing '"+fname_pkl+"' averged over dump range:", dump_range, color="magenta")
-                bsobj = bsdat(bs.xc, np.exp(np.mean(np.log(np.stack(bs_y, axis=0)), axis=0)))
+                y = np.mean(np.log10(np.stack(bs_y, axis=0)), axis=0)
+                y_std = np.std(np.log10(np.stack(bs_y, axis=0)), axis=0)
+                bsobj = bsdat(bs.xc, y, y_std)
                 dill.dump(bsobj, fobj)
     if MPI: comm.Barrier()
     print("Read '"+fname_pkl+"'", color="green")
