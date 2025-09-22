@@ -78,24 +78,23 @@ def make_paper_plots():
                         good_ind = ((bsdat.x >= centre[i]/factor) & (bsdat.x <= centre[i]*factor)) # Sample only relevant region around a factor of sqrt(3) around the centre
                         fitting_range_x = bsdat.x[good_ind] # Extract relevant x data
                         fitting_range_y = bsdat.y[good_ind] # Extract relevant y data
+                        fitting_range_y_std = bsdat.y_std[good_ind] # Extract relevant y data
 
                         # Interpolate data to ensure equal weighting.
-                        npts = 1001
-                        npts_per_tturb = int(npts / 10)
-                        x_int = np.linspace(centre[i]/factor, centre[i]*factor, npts) # interpolated length axis
-                        ekdr_int = np.interp(x_int, fitting_range_x, fitting_range_y)
+                        npts = 1000
+                        x_int = np.linspace(centre[i]/factor, centre[i]*factor, npts) # Interpolated length axis
+                        ekdr_int = np.interp(x_int, fitting_range_x, fitting_range_y) # Interpolated ekdr according to length axis.
+                        ekdr_err_int = np.interp(x_int, fitting_range_x, fitting_range_y_std)
 
                         # Call fitting function
                         guesses = {'a': [1, 1.0, 3],'b': [-10.0, 1.0, 10.0]} # Define some bounds on guesses (needed for cfp.fit)
-                        res = cfp.fit(model, np.log10(x_int), ekdr_int, params=guesses)
+                        res = cfp.fit(model, np.log10(x_int), ekdr_int, params = guesses, yerr = ekdr_err_int)
+
+                        # Define some scaling parameters to move the fits just beneath simulation curve
+                        scale_factor = [[1.5e-1, 8e-1], [5e-1, 3e-1]]
 
                         # Plot the fitted region, with a scaling label
-                        scale_factor = 1.0 # Define some scaling parameters to move the fits just beneath simulation curve
-                        # scale_factor[i][imach],  [[1.5e-1, 8e-1], [6e-1, 2.5e-1]], color[isim]
-                        norm = 10**res.popt[1]*scale_factor
-                        color_v2 = "pink"
-                        stop()
-                        ret = cfp.plot(x = x_int, y=norm*x_int**res.popt[0], color = color_v2)
+                        ret = cfp.plot(x = x_int, y=scale_factor[i][imach]*x_int**res.popt[0], color = color[isim])
                         cfp.plot(
                             x = fit_pos_x[i], y = fit_pos_y[i], ax=ret.ax(),
                             text=fr'$\propto \ell^{{{res.popt[0]:.2f}\,\pm\,{res.pstd[0]:.2f}}}$',
