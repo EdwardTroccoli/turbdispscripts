@@ -101,12 +101,12 @@ def make_paper_plots():
                         injr_int = np.interp(time_int, time, injr)
 
                         time_lags = [] # Overall list of the minima of L2 for each interation
-                        for i in range(1,9,2): # Loop such that we look at the region (1,3), (3,5) and so on
+                        for i in range(1,6,4): # Loop such that we look at the region (1,3), (3,5) and so on
                             tshifts = []
                             L2s = []
-                            time_int_scan = time_int[i*npts_per_tturb :] # Restrict the domains (remove data that was previously used)
-                            ekdr_int_scan = ekdr_int[i*npts_per_tturb :]
-                            injr_int_scan = injr_int[i*npts_per_tturb :]
+                            time_int_scan = time_int[i*npts_per_tturb : (i+4)*npts_per_tturb] # Restrict the domains (remove data that was previously used)
+                            ekdr_int_scan = ekdr_int[i*npts_per_tturb : (i+4)*npts_per_tturb]
+                            injr_int_scan = injr_int[i*npts_per_tturb : (i+4)*npts_per_tturb]
 
                             # Compute L2 norm
                             for ishift in range(1, 2*npts_per_tturb):
