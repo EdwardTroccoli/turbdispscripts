@@ -55,12 +55,14 @@ def make_paper_plots():
 
                 # Read pkl file from relevant sim directory
                 bsdat = get_ekdr_size_fractal_dim("../"+sim+"/")
-
+                sigylo = 10**bsdat.y - 10**(bsdat.y-bsdat.y_std)
+                sigyup = 10**(bsdat.y+bsdat.y_std) - 10**bsdat.y
                 # Plot the curve of dissipation against \ell/L
                 xpos, ypos, length = 0.7, 0.1, 1.4
                 lf = cfp.legend_formatter(pos=(xpos, ypos+isim*dy[isim]), length=length)
-                ret = cfp.plot(x=bsdat.x, y=bsdat.y, label=MachSim+str(N),
-                                color=color[isim], linestyle=linestyle[isim], legend_formatter=lf
+                ret = cfp.plot(x=bsdat.x, y=10**bsdat.y, label=MachSim+str(N),
+                                color=color[isim], linestyle=linestyle[isim], legend_formatter=lf,
+                                yerr=[sigylo, sigyup], shaded_err=[color[isim],0.2]
                                 )
                 if N == 2048: # Only run for this sim res
 
@@ -71,18 +73,29 @@ def make_paper_plots():
                     # Sample relevant data
                     factor = np.sqrt(3) # Goes sqrt(3) below and above of what l_nu is
                     centre = [l_nu[0], 0.3/np.sqrt(3)] # Define the centres for the two regions to find fractal dimension
-                    for i in range(0,2): # Loop over the two fitting regions
+                    for i in range(2): # Loop over the two fitting regions
+
                         good_ind = ((bsdat.x >= centre[i]/factor) & (bsdat.x <= centre[i]*factor)) # Sample only relevant region around a factor of sqrt(3) around the centre
                         fitting_range_x = bsdat.x[good_ind] # Extract relevant x data
                         fitting_range_y = bsdat.y[good_ind] # Extract relevant y data
 
+                        # Interpolate data to ensure equal weighting.
+                        npts = 1001
+                        npts_per_tturb = int(npts / 10)
+                        x_int = np.linspace(centre[i]/factor, centre[i]*factor, npts) # interpolated length axis
+                        ekdr_int = np.interp(x_int, fitting_range_x, fitting_range_y)
+
                         # Call fitting function
                         guesses = {'a': [1, 1.0, 3],'b': [-10.0, 1.0, 10.0]} # Define some bounds on guesses (needed for cfp.fit)
-                        res = cfp.fit(model, np.log(fitting_range_x), np.log(fitting_range_y), params=guesses)
+                        res = cfp.fit(model, np.log10(x_int), ekdr_int, params=guesses)
 
                         # Plot the fitted region, with a scaling label
-                        scale_factor = [[1.5e-1, 8e-1], [6e-1, 2.5e-1]] # Define some scaling parameters to move the fits just beneath simulation curve
-                        ret = cfp.plot(x = fitting_range_x, y=scale_factor[i][imach]*fitting_range_x**res.popt[0], color = color[isim])
+                        scale_factor = 1.0 # Define some scaling parameters to move the fits just beneath simulation curve
+                        # scale_factor[i][imach],  [[1.5e-1, 8e-1], [6e-1, 2.5e-1]], color[isim]
+                        norm = 10**res.popt[1]*scale_factor
+                        color_v2 = "pink"
+                        stop()
+                        ret = cfp.plot(x = x_int, y=norm*x_int**res.popt[0], color = color_v2)
                         cfp.plot(
                             x = fit_pos_x[i], y = fit_pos_y[i], ax=ret.ax(),
                             text=fr'$\propto \ell^{{{res.popt[0]:.2f}\,\pm\,{res.pstd[0]:.2f}}}$',
@@ -147,7 +160,7 @@ if __name__ == "__main__":
             # Read data and plot
             ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
             bsdat = get_ekdr_size_fractal_dim(path)
-            cfp.plot(x=bsdat.x, y=bsdat.y, type='scatter', label='sim')
+            cfp.plot(x=bsdat.x, y=10**bsdat.y, type='scatter', label='sim')
             cfp.plot(x=0.85, y=0.05, text=rf"$\mathcal{{M}} = {Mach}$", normalised_coords=True)
             for i in range(1,4):
                 cfp.plot(x=bsdat.x, y=bsdat.x**i, label=rf'$\propto r^{i}$')
