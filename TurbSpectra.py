@@ -121,7 +121,7 @@ def make_paper_plots():
                 sigyup = 10**(spectra_dat['col6']+spectra_dat['col7'])*norm*compensation_factor - y
                 ret = cfp.plot(x=spectra_dat['col1'], y=y, label=label,
                                 color=color[isim], linestyle=linestyle[isim], legend_formatter=legend_formatter,
-                                yerr=[sigylo, sigyup], shaded_err=[color[isim],0.2])
+                                yerr=[sigylo, sigyup], shaded_err=[color[isim],0.1])
                 if var == 'vels':
                     ax = ret.ax()
                     ax.axvline(x=k_nu[0], color='#d62728', linewidth = 1, linestyle = "dotted")
