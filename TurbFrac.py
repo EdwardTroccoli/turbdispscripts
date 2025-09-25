@@ -62,7 +62,7 @@ def make_paper_plots():
                 lf = cfp.legend_formatter(pos=(xpos, ypos+isim*dy[isim]), length=length)
                 ret = cfp.plot(x=bsdat.x, y=10**bsdat.y, label=MachSim+str(N),
                                 color=color[isim], linestyle=linestyle[isim], legend_formatter=lf,
-                                yerr=[sigylo, sigyup], shaded_err=[color[isim],0.2]
+                                yerr=[sigylo, sigyup], shaded_err=[color[isim],0.1]
                                 )
                 if N == 2048: # Only run for this sim res
 
@@ -88,16 +88,17 @@ def make_paper_plots():
 
                         # Call fitting function
                         guesses = {'a': [1, 1.0, 3],'b': [-10.0, 1.0, 10.0]} # Define some bounds on guesses (needed for cfp.fit)
-                        res = cfp.fit(model, np.log10(x_int), ekdr_int, params = guesses, yerr = ekdr_err_int)
+                        res = cfp.fit(model, np.log10(x_int), ekdr_int, params = guesses, yerr = ekdr_err_int, n_random_draws=1000)
 
                         # Define some scaling parameters to move the fits just beneath simulation curve
                         scale_factor = [[1.5e-1, 8e-1], [5e-1, 3e-1]]
 
                         # Plot the fitted region, with a scaling label
+                        exp_str = fr'{res.popt[0]:.2f}\,\pm\,{res.perr[0][1]:.2f}'
                         ret = cfp.plot(x = x_int, y=scale_factor[i][imach]*x_int**res.popt[0], color = color[isim])
                         cfp.plot(
                             x = fit_pos_x[i], y = fit_pos_y[i], ax=ret.ax(),
-                            text=fr'$\propto \ell^{{{res.popt[0]:.2f}\,\pm\,{res.pstd[0]:.2f}}}$',
+                            text = fr'$\propto \ell^{{{exp_str}}}$',
                             color=color[isim], normalised_coords=True
                         )
 
