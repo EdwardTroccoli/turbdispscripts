@@ -20,7 +20,6 @@ def make_paper_plots():
             Re_coe_sup = np.array([0.33, 0.01])
             if mach == 0.2:
                 sims = ["N2048M0p2HDRe2500HP","N1024M0p2HDRe2500", "N512M0p2HDRe2500", "N256M0p2HDRe2500"]
-                MachNum = '0p2'
                 MachSim = 'Sub'
                 l_nu = 1/(np.array([Re_coe_sub[0], Re_coe_sub[0]+Re_coe_sub[1], Re_coe_sub[0]-Re_coe_sub[1]])*Re**(3/4)*k_turb)
                 l_nu_pos_x = 0.57
@@ -30,7 +29,6 @@ def make_paper_plots():
                 ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
             if mach == 5:
                 sims = ["N2048M5HDRe2500HP", "N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
-                MachNum = '5'
                 MachSim = 'Sup'
                 phi = np.array([0.42, 0.09, 0.12])
                 psup = np.array([0.49, 0.01, 0.01])
@@ -62,7 +60,7 @@ def make_paper_plots():
                 lf = cfp.legend_formatter(pos=(xpos, ypos+isim*dy[isim]), length=length)
                 ret = cfp.plot(x=bsdat.x, y=10**bsdat.y, label=MachSim+str(N),
                                 color=color[isim], linestyle=linestyle[isim], legend_formatter=lf,
-                                yerr=[sigylo, sigyup], shaded_err=[color[isim],0.1]
+                                yerr=[sigylo, sigyup], shaded_err=[color[isim], 0.1]
                                 )
                 if N == 2048: # Only run for this sim res
 
@@ -88,30 +86,30 @@ def make_paper_plots():
 
                         # Call fitting function
                         guesses = {'a': [1, 1.0, 3],'b': [-10.0, 1.0, 10.0]} # Define some bounds on guesses (needed for cfp.fit)
-                        res = cfp.fit(model, np.log10(x_int), ekdr_int, params = guesses, yerr = ekdr_err_int, n_random_draws=1000)
+                        res = cfp.fit(model, np.log10(x_int), ekdr_int, params=guesses, yerr=ekdr_err_int, n_random_draws=1000)
 
                         # Define some scaling parameters to move the fits just beneath simulation curve
                         scale_factor = [[1.5e-1, 8e-1], [5e-1, 3e-1]]
 
                         # Plot the fitted region, with a scaling label
                         exp_str = fr'{res.popt[0]:.2f}\,\pm\,{res.perr[0][1]:.2f}'
-                        ret = cfp.plot(x = x_int, y=scale_factor[i][imach]*x_int**res.popt[0], color = color[isim])
+                        ret = cfp.plot(x=x_int, y=scale_factor[i][imach]*x_int**res.popt[0], color=color[isim])
                         cfp.plot(
-                            x = fit_pos_x[i], y = fit_pos_y[i], ax=ret.ax(),
-                            text = fr'$\propto \ell^{{{exp_str}}}$',
+                            x=fit_pos_x[i], y=fit_pos_y[i], ax=ret.ax(),
+                            text=fr'$\propto \ell^{{{exp_str}}}$',
                             color=color[isim], normalised_coords=True
                         )
 
             # Plot a vertical line at l_nu with 16th and 84th percentile shaded (both sub and sup)
             ax = ret.ax()
-            ax.axvline(x=l_nu[0], color='#d62728', linewidth = 0.9, linestyle = "dotted")
+            ax.axvline(x=l_nu[0], color='#d62728', linewidth=0.9, linestyle="dotted")
             ax.axvspan(l_nu[1], l_nu[2], color='#d62728', alpha=0.3, linewidth=0)
             cfp.plot(x=l_nu_pos_x, y=l_nu_pos_y, ax=ret.ax(),
                     text=r'$\ell_{\nu}$', color='#d62728', normalised_coords=True)
 
             # Plot a vertical line at l_s with 16th and 84th percentile shaded (only sup)
             if mach > 1:
-                ax.axvline(x=l_s[0], color='darkgoldenrod', linewidth = 0.9, linestyle = "dotted")
+                ax.axvline(x=l_s[0], color='darkgoldenrod', linewidth=0.9, linestyle="dotted")
                 ax.axvspan(l_s[1], l_s[2], color='darkgoldenrod', alpha=0.1, linewidth=0)
                 cfp.plot(x=0.39, y=0.12, ax=ret.ax(),
                     text=r'$\ell_{s}$', color = "darkgoldenrod", normalised_coords=True)
@@ -123,7 +121,7 @@ def make_paper_plots():
 
             # Plot the sample curves
             for i in range(1,4):
-                cfp.plot(x=0.04, y=0.93 - i*dy, ax=ret.ax(),
+                cfp.plot(x=0.04, y=0.93-i*dy, ax=ret.ax(),
                         text=rf'$\propto \ell^{i}$',normalised_coords=True)
                 C = y0 / (r0**i)
                 y = C * r**i
