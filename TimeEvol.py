@@ -101,6 +101,7 @@ def make_paper_plots():
                         injr_int = np.interp(time_int, time, injr)
 
                         time_lags = [] # Overall list of the minima of L2 for each interation
+                        L2s_total = []
                         for i in range(1,6,4): # Loop such that we look at the region (1,3), (3,5) and so on
                             tshifts = []
                             L2s = []
@@ -114,13 +115,13 @@ def make_paper_plots():
                                 L2s.append((np.std(injr_int_scan[:-ishift]-ekdr_int_scan[ishift:])/np.mean(injr_int_scan[:-ishift]))**2)
                         
                             # Append results to time_lags and find the minimal L2 in the tshift range.
-                            tshifts = np.array(tshifts); L2s=np.array(L2s)
+                            tshifts = np.array(tshifts); L2s=np.array(L2s); L2s_total.append(L2s)
                             time_lags.append(tshifts[L2s==L2s.min()][0])
 
-                        ret = cfp.plot(x=tshifts, y=L2s, color='black')
+                        ret = cfp.plot(x=tshifts, y=np.mean(L2s_total, axis = 0), yerr=np.std(L2s_total, axis = 0), shaded_err=[color[isim], 0.1], color='black')
                         ax = ret.ax()
-                        ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform=ax.transAxes, fontsize=14, color='black',
-                                verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0))
+                        ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform =ax.transAxes, fontsize = 14, color = 'black',
+                                verticalalignment = 'top', bbox = dict(boxstyle="round,pad=0.3", facecolor = 'gray', alpha = 0))
                         ylim = [0, 0.35]
                         xlabel = r'$\Delta t/t_{\mathrm{turb}}$'
                         if Mach == 0.2: ylabel = r'$\vert\vert(\varepsilon_{\mathrm{kin}},\varepsilon_{\mathrm{inj}})\vert\vert_{\ell^2}$'
@@ -128,7 +129,7 @@ def make_paper_plots():
                         time_lags = np.array(time_lags)
                         print(
                             f"time shift for maximum eps_kin → eps_inj correlation (in t_turb) = {time_lags}\n"
-                            f"Result: {time_lags.mean():.3g} ± {time_lags.std():.3g}"
+                            f"Result: {time_lags.mean():.3g}+/-{time_lags.std():.3g}"
                         )
             if remove_x_ticks:
                 ax = ret.ax()
