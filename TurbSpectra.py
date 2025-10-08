@@ -95,7 +95,8 @@ def make_paper_plots():
                 spectra_dat, spectra_header = read_spect(dat) 
                 # plot
                 xpos, ypos, length = 0.012, 0.085, 1.4
-                lf = cfp.legend_formatter(pos=(xpos+isim*dx[isim], ypos), length=length)
+                lf = cfp.legend_formatter()
+                lf.add(pos=(xpos+isim*dx[isim], ypos), length=length)
                 ylim = None
                 if var in ['vels','sqrtrho']: 
                     compensation_factor = spectra_dat['col1']**eval(compensation)
@@ -132,7 +133,7 @@ def make_paper_plots():
                         ax.axvline(x=l_s[0], color='darkgoldenrod', linewidth = 0.9, linestyle = "dotted")
                         ax.axvspan(l_s[1], l_s[2], color='darkgoldenrod', alpha=0.1, linewidth=0)
                         cfp.plot(x=0.74, y=0.12, ax=ret.ax(),
-                            text=r'$k_{s}$', color = "darkgoldenrod", normalised_coords=True)
+                            text=r'$k_{\mathrm{s}}$', color = "darkgoldenrod", normalised_coords=True)
             cfp.plot(axes_format=axes_format, xlabel=xlabel, ylabel=ylabel, xlog=True, ylim=ylim, ylog=True, save=fig_path+"spectra_"+var+"_M"+MachNum+".pdf")
 
 
