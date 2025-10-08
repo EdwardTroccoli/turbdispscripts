@@ -10,6 +10,7 @@ import cfpack as cfp
 from Globals import *
 from matplotlib import rcParams
 cfp.load_plot_style() # to load cfpack plot style
+lf = cfp.legend_formatter()
 
 def plot_var(path, dat, variable):
     t_turb = params(path).t_turb
@@ -83,10 +84,12 @@ def make_paper_plots():
                     if mach == 0.2:
                         ylabel = r'$\varepsilon_\mathrm{kin}$ and $\varepsilon_\mathrm{inj}$\quad$[\langle\rho\rangle\,\mathcal{M}^2\,c_{\mathrm{s}}^2\,t_{\mathrm{turb}}^{-1}]$'
                     xpos, ypos, length = 0.072, 0.91, 1.4
-                    lf = cfp.legend_formatter(pos=(xpos+isim*dx[isim], ypos), length=length)
+                    lf = cfp.legend_formatter()
+                    lf.add(pos=(xpos+isim*dx[isim], ypos), length=length)
                     ret = cfp.plot(x=time, y=ekdr, label=MachSim+str(N), color=color[isim], linestyle=linestyle[isim], legend_formatter=lf)
                     if N==2048:
-                        lf = cfp.legend_formatter(pos=(xpos, ypos-0.1), length=length)
+                        lf = cfp.legend_formatter()
+                        lf.add(pos=(xpos, ypos-0.1), length=length)
                         cfp.plot(x=time, y=injr, label = MachSim+str(N), color='blue', legend_formatter=lf)#label=r'$\varepsilon_{\mathrm{inj}}$'
                         cfp.plot(x=0.022, y=ypos-0.1, text=r"$\varepsilon_{\mathrm{inj}}$:", normalised_coords=True)
                         cfp.plot(x=0.022, y=ypos, text=r"$\varepsilon_{\mathrm{kin}}$:", normalised_coords=True)
@@ -117,19 +120,19 @@ def make_paper_plots():
                             # Append results to time_lags and find the minimal L2 in the tshift range.
                             tshifts = np.array(tshifts); L2s=np.array(L2s); L2s_total.append(L2s)
                             time_lags.append(tshifts[L2s==L2s.min()][0])
-
-                        ret = cfp.plot(x=tshifts, y=np.mean(L2s_total, axis = 0), yerr=np.std(L2s_total, axis = 0), shaded_err=[color[isim], 0.1], color='black')
+                            stop()
+                        ret = cfp.plot(x=tshifts, y=np.mean(L2s_total, axis = 0), yerr=[np.min(L2s_total,axis=0),np.max(L2s_total,axis=0)], shaded_err=[color[isim], 0.1], color='black')
                         ax = ret.ax()
                         ax.text(0.05, 0.95, rf"$\mathcal{{M}} = {Mach}$", transform =ax.transAxes, fontsize = 14, color = 'black',
                                 verticalalignment = 'top', bbox = dict(boxstyle="round,pad=0.3", facecolor = 'gray', alpha = 0))
-                        ylim = [0, 0.35]
-                        xlabel = r'$\Delta t/t_{\mathrm{turb}}$'
+                        ylim = [0, 0.30]
+                        xlabel = r'$\Delta t_\mathrm{inj-diss}/t_{\mathrm{turb}}$'
                         if Mach == 0.2: ylabel = r'$\vert\vert(\varepsilon_{\mathrm{kin}},\varepsilon_{\mathrm{inj}})\vert\vert_{\ell^2}$'
                         # print optimal time shift for max correlation
                         time_lags = np.array(time_lags)
                         print(
-                            f"time shift for maximum eps_kin → eps_inj correlation (in t_turb) = {time_lags}\n"
-                            f"Result: {time_lags.mean():.3g}+/-{time_lags.std():.3g}"
+                            f"time shifts for maximum eps_kin → eps_inj correlation (in t_turb) = {time_lags}\n"
+                            f"Average time shifts: {time_lags.mean():.3g}+/-{time_lags.std():.3g}"
                         )
             if remove_x_ticks:
                 ax = ret.ax()
