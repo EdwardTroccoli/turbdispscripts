@@ -53,12 +53,14 @@ def make_paper_plots():
 
                 # Read pkl file from relevant sim directory
                 bsdat = get_ekdr_size_fractal_dim("../"+sim+"/")
+                x_dat = bsdat.x * 2
                 sigylo = 10**bsdat.y - 10**(bsdat.y-bsdat.y_std)
                 sigyup = 10**(bsdat.y+bsdat.y_std) - 10**bsdat.y
                 # Plot the curve of dissipation against \ell/L
                 xpos, ypos, length = 0.7, 0.1, 1.4
-                lf = cfp.legend_formatter(pos=(xpos, ypos+isim*dy[isim]), length=length)
-                ret = cfp.plot(x=bsdat.x, y=10**bsdat.y, label=MachSim+str(N),
+                lf = cfp.legend_formatter()
+                lf.add(pos=(xpos, ypos+isim*dy[isim]), length=length)
+                ret = cfp.plot(x=x_dat, y=10**bsdat.y, label=MachSim+str(N), ylim=[9e-3, 2],
                                 color=color[isim], linestyle=linestyle[isim], legend_formatter=lf,
                                 yerr=[sigylo, sigyup], shaded_err=[color[isim], 0.1]
                                 )
@@ -71,6 +73,7 @@ def make_paper_plots():
                     # Sample relevant data
                     factor = np.sqrt(3) # Goes sqrt(3) below and above of what l_nu is
                     centre = [l_nu[0], 0.3/np.sqrt(3)] # Define the centres for the two regions to find fractal dimension
+
                     for i in range(2): # Loop over the two fitting regions
 
                         good_ind = ((bsdat.x >= centre[i]/factor) & (bsdat.x <= centre[i]*factor)) # Sample only relevant region around a factor of sqrt(3) around the centre
@@ -102,17 +105,17 @@ def make_paper_plots():
 
             # Plot a vertical line at l_nu with 16th and 84th percentile shaded (both sub and sup)
             ax = ret.ax()
-            ax.axvline(x=l_nu[0], color='#d62728', linewidth=0.9, linestyle="dotted")
-            ax.axvspan(l_nu[1], l_nu[2], color='#d62728', alpha=0.3, linewidth=0)
+            ax.axvline(x=l_nu[0]/2, color='#d62728', linewidth=0.9, linestyle="dotted")
+            ax.axvspan(l_nu[1]/2, l_nu[2]/2, color='#d62728', alpha=0.3, linewidth=0)
             cfp.plot(x=l_nu_pos_x, y=l_nu_pos_y, ax=ret.ax(),
                     text=r'$\ell_{\nu}$', color='#d62728', normalised_coords=True)
 
             # Plot a vertical line at l_s with 16th and 84th percentile shaded (only sup)
             if mach > 1:
-                ax.axvline(x=l_s[0], color='darkgoldenrod', linewidth=0.9, linestyle="dotted")
-                ax.axvspan(l_s[1], l_s[2], color='darkgoldenrod', alpha=0.1, linewidth=0)
+                ax.axvline(x=l_s[0]/2, color='darkgoldenrod', linewidth=0.9, linestyle="dotted")
+                ax.axvspan(l_s[1]/2, l_s[2]/2, color='darkgoldenrod', alpha=0.1, linewidth=0)
                 cfp.plot(x=0.39, y=0.12, ax=ret.ax(),
-                    text=r'$\ell_{s}$', color = "darkgoldenrod", normalised_coords=True)
+                    text=r'$\ell_{\mathrm{s}}$', color = "darkgoldenrod", normalised_coords=True)
 
             # Define parameters for plotting ell^1, ell^2, ell^3 in the corner
             r = np.logspace(-3.5, -3)
