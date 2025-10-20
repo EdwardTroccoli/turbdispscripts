@@ -8,10 +8,10 @@ import os
 import timeit
 import cfpack as cfp
 import cfpack.hdfio as hdfio
-from cfpack.defaults import *
 from Globals import *
 import argparse
 import matplotlib.pyplot as plt
+cfp.load_plot_style() # to load cfpack plot style
 
 def plot_variable():
 
@@ -52,14 +52,14 @@ def plot_variable():
         # create box for Mach number label
         if Mach == 0.2: MachSim = 'Sub'
         if Mach == 5: MachSim = 'Sup'
-        ax.text(0.05, 0.95, MachSim+str(N), transform=ax.transAxes, color='white', verticalalignment='top',
+        time = hdfio.read(filen, "time")[0] / t_turb
+        time_str = cfp.round(time, 2, str_ret=True)
+        ax.text(0.05, 0.95, time_str+r"$t_{\mathrm{turb}}$", transform=ax.transAxes, color='white', verticalalignment='top',
                 bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
         if remove_x_ticks == True:
             ax.set_xticklabels([])
         if remove_y_ticks == True:
             ax.set_yticklabels([])
-        #time = hdfio.read(filen, "time")[0] / tturb
-        #time_str = cfp.round(time, 3, str_ret=True)
         cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, color='white', normalised_coords=True, save=out_file)#text=r"$t/t_\mathrm{turb}="+time_str+r"$",
 
     #loop over movie files for other variables
@@ -80,8 +80,8 @@ def plot_variable():
             cmap_label = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
             cmap_label = None
         # Define formatted filename correctly
-        #out_file = out_path+f"frame_{variable}_{i:06d}.png"
-        out_file = out_path+f"frame_{variable}_000250_M{MachNum}.pdf"
+        out_file = out_path+f"frame_{variable}_{i:06d}.png"
+        #out_file = out_path+f"frame_{variable}_000250_M{MachNum}.pdf"
         plot_frame(var)
 
 def make_paper_plots():
@@ -90,28 +90,29 @@ def make_paper_plots():
         ret = cfp.plot_map(var, log=log, cmap_label=cmap_label, cmap=cmap, xlim=[0,1], ylim=[0,1], aspect_data='equal', vmin=vmin, vmax=vmax)
         ax = ret.ax()[0]
         # create box for Mach number label
-        ax.text(0.05, 0.95, MachSim+str(N), transform=ax.transAxes, color='white', verticalalignment='top',
+        time = hdfio.read(filen, "time")[0] / t_turb
+        time_str = cfp.round(time, 3, str_ret=True)
+        stop()
+        ax.text(0.05, 0.95, time_str, transform=ax.transAxes, color='white', verticalalignment='top',
                 bbox=dict(boxstyle="round,pad=0.3", facecolor='gray', alpha=0.5))
         if remove_x_ticks == True:
             ax.set_xticklabels([])
         if remove_y_ticks == True:
             ax.set_yticklabels([])
-        #time = hdfio.read(filen, "time")[0] / tturb
-        #time_str = cfp.round(time, 3, str_ret=True)
         cfp.plot(ax=ret.ax()[0], xlabel=xlabel, ylabel=ylabel, color='white', normalised_coords=True, save=out_file)#text=r"$t/t_\mathrm{turb}="+time_str+r"$",
     
     # loop over figures
-    vars = ['ekdr', 'dens'] #'vort'
+    vars = ['dens', 'ekdr'] #'vort'
     for variable in vars:
         # loop over Mach numbers
         machs = [0.2, 5]
         for mach in machs:
             if mach == 0.2:
-                sims = ["N2048M0p2HDRe2500HP", "N1024M0p2HDRe2500", "N512M0p2HDRe2500", "N256M0p2HDRe2500"]
+                sims = ["N1024M0p2HDRe2500"]#, "N1024M0p2HDRe2500", "N512M0p2HDRe2500", "N256M0p2HDRe2500"]
                 MachNum = '0p2'
                 MachSim = 'Sub'
             if mach == 5:
-                sims = ["N2048M5HDRe2500HP", "N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
+                sims = ["N2048M5HDRe2500HP"]#, "N1024M5HDRe2500", "N512M5HDRe2500", "N256M5HDRe2500"]
                 MachNum = '5'
                 MachSim = 'Sup'
             # loop over simulations
@@ -120,7 +121,7 @@ def make_paper_plots():
                 out_path = "../"+sim + "/movie_files/"
                 if not os.path.isdir(out_path):
                     cfp.run_shell_command('mkdir '+out_path)
-                slices = sorted(glob.glob(out_path+"Turb_slice_xy_000250"))
+                slices = sorted(glob.glob(out_path+"Turb_slice_xy_000???"))
                 plot_files = sorted(glob.glob("../"+sim+"/Turb_hdf5_plt_cnt_0050"))
                 # get sim parameters
                 N = params(sim).N
@@ -141,8 +142,8 @@ def make_paper_plots():
                             vortz = os.path.dirname(filen)+'/movie_files/'+os.path.basename(filen+'_vorticity_z_slice_z.h5')
                             vortx,vorty,vortz = hdfio.read(vortx, "vorticity_x_slice"), hdfio.read(vorty, "vorticity_y_slice"), hdfio.read(vortz, "vorticity_z_slice")
                             var = np.sqrt(vortx**2+vorty**2+vortz**2)*((1/N) / Mach)
-                            #out_file = out_path+f"frame_{variable}_{i:06d}_{N}.png"
-                            out_file = out_path+f"frame_{variable}_000250_M{MachNum}_{N}.pdf"
+                            out_file = out_path+f"frame_{variable}_{i:06d}_{N}.png"
+                            #out_file = out_path+f"frame_{variable}_000250_M{MachNum}_{N}.pdf"
                             plot_variable()
                 else:
                     for i, filen in enumerate(slices):
@@ -170,7 +171,8 @@ def make_paper_plots():
                                 ylabel = None
                                 cmap_label = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
                                 remove_y_ticks = True
-                        out_file = fig_path+f"frame_{variable}_000250_M{MachNum}_{N}.pdf"
+                        out_file = out_path+f"frame_{variable}_{i:06d}_{N}.png"
+                        # out_file = fig_path+f"frame_{variable}_000250_M{MachNum}_{N}.pdf"
                         plot_variable()
                         
 
@@ -207,8 +209,8 @@ if __name__ == "__main__":
             if 'M5' in out_path: MachNum = '5'
 
             # Get all files matching the pattern Turb_slice_xy_*
-            #files = sorted(glob.glob(out_path+"Turb_slice_xy_*"))
-            slices = sorted(glob.glob(out_path+"Turb_slice_xy_000250"))
+            slices = sorted(glob.glob(out_path+"Turb_slice_xy_*"))
+            #slices = sorted(glob.glob(out_path+"Turb_slice_xy_000250"))
             plot_files = sorted(glob.glob(path+"Turb_hdf5_plt_cnt_0050"))
             for variable in args.variable:
                 # call plot function
