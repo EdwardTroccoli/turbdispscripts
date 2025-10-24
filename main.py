@@ -12,13 +12,19 @@ parser.add_argument("-ov", "--overwrite", action='store_true', default=False, he
 # Parse the command-line arguments
 args = parser.parse_args()
 
-if args.overwrite==True:
-    cfp.print('Working on TimeEvol', color='yellow')
-    cfp.run_shell_command('TimeEvol.py -paper')
-    cfp.print('Working on TurbMov', color='yellow')
-    cfp.run_shell_command('TurbMov.py -paper')
-    cfp.print('Working on TurbPDF', color='yellow')
-    cfp.run_shell_command('TurbPDF.py -p2 -ov')
-    cfp.print('Working on TurbSpectra', color='yellow')
-    cfp.run_shell_command('TurbSpectra.py -ov')
+def all_figures(overwrite):
+    if overwrite: overwrite = "-ov"
+    else: overwrite = ""
 
+    cfp.print('Running Globals.py', color='yellow')
+    cfp.run_shell_command(f'Globals.py -clean_datfile -compute_vort -compute_2dpdfs -compute_spectra -compute_ekdr_size {overwrite}')
+    cfp.print('Running TurbPDF', color='yellow')
+    cfp.run_shell_command(f'TurbPDF.py -p2 {overwrite}')
+    cfp.print('Running TimeEvol', color='yellow')
+    cfp.run_shell_command('TimeEvol.py -paper')
+    cfp.print('Running TurbSpectra', color='yellow')
+    cfp.run_shell_command('TurbSpectra.py -paper')
+    cfp.print('Running TurbFrac', color='yellow')
+    cfp.run_shell_command('TurbFrac.py -paper')
+
+all_figures(args.overwrite)
