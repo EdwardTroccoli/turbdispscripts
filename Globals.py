@@ -15,7 +15,11 @@ from cfpack import print, stop
 import cfpack as cfp
 
 # === define simulations to work on ===
-sim_paths = ["../N256M0p2HDRe2500/", "../N256M5HDRe2500/","../N512M0p2HDRe2500/", "../N512M5HDRe2500/","../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/","../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
+sim_paths = ["../N256M0p2HDRe2500/", "../N256M5HDRe2500/",
+             "../N512M0p2HDRe2500/", "../N512M5HDRe2500/",
+             "../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/",
+             "../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
+sim_paths = ["../N512M5HDRe2500/", "../N512M0p2HDRe2500/"]
 # =====================================
 
 # create figure output path
@@ -26,6 +30,7 @@ if not os.path.isdir(fig_path):
 # for getting global simulation parameters
 def params(model_name):
     class ret:
+        Re = 2500
         if 'M0p2' in model_name: Mach = 0.2
         if 'M5'   in model_name: Mach = 5
         if '2048' in model_name: N = 2048
@@ -33,6 +38,7 @@ def params(model_name):
         if '512'  in model_name: N =  512
         if '256'  in model_name: N =  256
         t_turb = 0.5 / Mach
+        nu = Mach / (2*Re)
     return ret
 
 # global 2D-PDF settings
@@ -216,7 +222,7 @@ def get_2d_pdf(path, vars, overwrite=False):
     # return averaged 2D PDF
     return pdat
 
-# function to compute vort, also checks if they already exist and runs only if they don't
+# function to compute "vorticity", also checks if they already exist and runs only if they don't
 def compute_vort_file(filename, ncpu=8, pixel=1024, overwrite=False):
     # first check if we need to generate anything
     run_derivative_var = False
@@ -250,6 +256,40 @@ def compute_vort(overwrite=False):
         for d in range(dump_range[0], dump_range[1]+1, 1):
             plot_file = "Turb_hdf5_plt_cnt_{:04d}".format(d)
             compute_vort_file(sim_path+plot_file, ncpu=ncpu, pixel=params(sim_path).N, overwrite=overwrite)
+
+# function to compute "dissipation" (based on rate of strain), also checks if they already exist and runs only if they don't
+def compute_strain_dissipation_file(filename, ncpu=8, pixel=1024, overwrite=False):
+    # first check if we need to generate anything
+    run_derivative_var = False
+    with h5py.File(filename, "r") as f:
+        if not all(x in f for x in ['diss_rate']):
+            run_derivative_var = True
+    if run_derivative_var or overwrite:
+        # if plot file doesn't already contain diss_rate, generate it
+        cfp.run_shell_command(mpicmd+str(ncpu)+' derivative_var '+filename+' -dissipation_with_nu '+str(params(filename).nu))
+    else:
+        cfp.print("Strain dissipation 'diss_rate' already in '"+filename+"' -- skipping creation.", color='green')
+    # taking slices
+    slice_filename = filename+"_diss_rate_slice_z.h5"
+    outfile = os.path.dirname(slice_filename)+'/movie_files/'+os.path.basename(slice_filename)
+    if not os.path.exists(outfile) or overwrite:
+        cfp.run_shell_command(mpicmd+str(ncpu)+' projection '+filename+' -dset diss_rate -slice -pixel '+str(pixel)+' '+str(pixel))
+        cfp.run_shell_command('mv '+slice_filename+' '+outfile)
+    else:
+        cfp.print("Slice file '"+outfile+"' already exists -- skipping.", color='green')
+
+def compute_strain_dissipation(overwrite=False):
+    for sim_path in sim_paths:
+        if params(sim_path).N == 2048:
+            ncpu = 4096
+        elif params(sim_path).N == 1024:
+            ncpu = 512
+        else:
+            ncpu = 64
+        dump_range = [20, 100]
+        for d in range(dump_range[0], dump_range[1]+1, 1):
+            plot_file = "Turb_hdf5_plt_cnt_{:04d}".format(d)
+            compute_strain_dissipation_file(sim_path+plot_file, ncpu=ncpu, pixel=params(sim_path).N, overwrite=overwrite)
 
 # computes spectra using C++ pdfs function
 def compute_spectra_file(filename, out_path='./', ncpu=8, overwrite=False):
@@ -300,6 +340,7 @@ if __name__ == "__main__":
     parser.add_argument("-ov", "--overwrite", action='store_true', default=False, help="Overwrite files")
     parser.add_argument("-clean_datfile", "--clean_datfile", action='store_true', default=False, help="Clean the .dat file(s).")
     parser.add_argument("-compute_vort", "--compute_vort", action='store_true', default=False, help="Compute vorticity.")
+    parser.add_argument("-compute_strain_diss", "--compute_strain_diss", action='store_true', default=False, help="Compute strain dissipation rate.")
     parser.add_argument("-compute_2dpdfs", "--compute_2dpdfs", action='store_true', default=False, help="Compute 2D-PDFs.")
     parser.add_argument("-compute_spectra", "--compute_spectra", action='store_true', default=False, help="Compute spectra.")
     parser.add_argument("-compute_ekdr_size", "--compute_ekdr_size", action='store_true', default=False, help="Compute EKDR vs. size for fractal dimension.")
@@ -311,6 +352,9 @@ if __name__ == "__main__":
 
     if args.compute_vort:
         compute_vort(overwrite=args.overwrite)
+
+    if args.compute_strain_diss:
+        compute_strain_dissipation(overwrite=args.overwrite)
 
     if args.compute_2dpdfs:
         for path in sim_paths:
