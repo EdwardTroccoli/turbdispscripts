@@ -127,7 +127,7 @@ def make_paper_plots():
                                 verticalalignment = 'top', bbox = dict(boxstyle="round,pad=0.3", facecolor = 'gray', alpha = 0))
                         ylim = [0, 0.30]
                         xlabel = r'$\Delta t_\mathrm{inj-diss}/t_{\mathrm{turb}}$'
-                        if Mach == 0.2: ylabel = r'$\vert\vert(\varepsilon_{\mathrm{kin}},\varepsilon_{\mathrm{inj}})\vert\vert_{\ell^2}$'
+                        if Mach == 0.2: ylabel = r'$\mathcal{C}_\mathrm{inj-diss}$'
                         # print optimal time shift for max correlation
                         time_lags = np.array(time_lags)
                         cfp.print(
