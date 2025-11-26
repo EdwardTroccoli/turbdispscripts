@@ -19,7 +19,7 @@ sim_paths = ["../N256M0p2HDRe2500/", "../N256M5HDRe2500/",
              "../N512M0p2HDRe2500/", "../N512M5HDRe2500/",
              "../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/",
              "../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
-sim_paths = ["../N512M5HDRe2500/", "../N512M0p2HDRe2500/"]
+sim_paths = ["../N512M0p2HDRe2500/"]
 # =====================================
 
 # create figure output path
@@ -42,7 +42,7 @@ def params(model_name):
     return ret
 
 # global 2D-PDF settings
-vars_2Dpdf = [["dens", "ekdr"], ["vort", "ekdr"]]
+vars_2Dpdf = [["dens", "ekdr"], ["vort", "ekdr"], ["diss", "ekdr"]]
 
 # host settings
 hostname = cfp.get_hostname()
@@ -137,6 +137,7 @@ def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwri
         print("reading x and y data and computing binned_statistic_2d for vars", vars, "...", color="red")
         dsets = copy.deepcopy(vars)
         if dsets[0] == 'vort': dsets[0] = 'vorticity'
+        if dsets[0] == 'diss': dsets[0] = 'diss_rate'
         MyBlocks = gg.GetMyBlocks(myPE, nPE) # domain decomposition
         counts_loc = []
         for b in tqdm(MyBlocks, disable=(myPE!=0), desc=f"[{myPE}]"): # loop over local list of block for the MPI rank
@@ -186,6 +187,8 @@ def get_2d_pdf(path, vars, overwrite=False):
             norms = [norm_dens, norm_ekdr]
         if vars == vars_2Dpdf[1]:
             norms = [norm_vort, norm_ekdr]
+        if vars == vars_2Dpdf[2]:
+            norms = [norm_ekdr, norm_ekdr]
         return norms
     # get 2D PDF
     print(f'\nComputing 2D-PDF for: {path}', color='cyan')
@@ -197,6 +200,7 @@ def get_2d_pdf(path, vars, overwrite=False):
     if vars[1] == "ekdr": bins_y = np.logspace(-14, 6, 400)
     if vars[0] == "dens": bins_x = np.logspace(-6, 4, 200)
     if vars[0] == "vort": bins_x = np.logspace(-9, 1, 200)
+    if vars[0] == "diss": bins_x = bins_y
     norms = get_2Dpdf_norms(path, vars)
     fname_pkl = out_path+"aver_2Dpdf_"+vars[0]+"_"+vars[1]+".pkl"
     if not os.path.isfile(fname_pkl) or overwrite:
@@ -251,7 +255,7 @@ def compute_vort(overwrite=False):
         elif params(sim_path).N == 1024:
             ncpu = 512
         else:
-            ncpu = 8
+            ncpu = 64
         dump_range = [20, 100]
         for d in range(dump_range[0], dump_range[1]+1, 1):
             plot_file = "Turb_hdf5_plt_cnt_{:04d}".format(d)
