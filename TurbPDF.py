@@ -57,12 +57,14 @@ def plot_1d_pdf(pdf_dat):
 
 def plot_2Dpdf(outfile, pdat, do_fit=False, by_hand_fit=None, fit_xlim=None, fit_ylim=None):
     remove_y_ticks = False
-    if pdat.variables[1] == "ekdr":
+    if pdat.variables[1][:4] == "ekdr":
         ylabel = r"Dissipation rate $\varepsilon_{\textrm{kin}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
-    if pdat.variables[0] == "dens":
+    if pdat.variables[0][:4] == "dens":
         xlabel = r"Density $\rho/(\langle\rho\rangle)$"
-    if pdat.variables[0] == "vort":
+    if pdat.variables[0][:4] == "vort":
         xlabel = r"Vorticity $|\nabla\times\mathbf{v}|/(\mathcal{M}c_{\textrm{s}}\Delta x^{-1})$"
+    if pdat.variables[0][:4] == "diss":
+        xlabel = r"Strain dissipation $\varepsilon_{\bm{\mathcal{S}}}/(\langle\rho\rangle\,\mathcal{M}^2\, c_{\textrm{s}}^2\,t_{\textrm{turb}}^{-1}$)"
     if 'M0p2' in outfile:
         MachStr = '0.2'
         cmap_label = None
@@ -207,6 +209,9 @@ if __name__ == "__main__":
                 if vars[0] == "vort":
                     by_hand_fit = [2.0, 2.75] # exponent and normalisation of power-law line to draw
                     fit_xlim = [1e-2, 3e-1]
+                if vars[0] == "diss":
+                    by_hand_fit = [1.0, 1.0] # exponent and normalisation of power-law line to draw
+                    fit_xlim = [1e-11, 1e4]
                 pdat = get_2d_pdf(path, vars)
                 # Plot 2D-PDF
                 outfile = out_path+"aver_2Dpdf_"+vars[0]+"_"+vars[1]+'_M'+MachStr+'.pdf'
