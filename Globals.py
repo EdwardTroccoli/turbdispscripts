@@ -19,7 +19,7 @@ sim_paths = ["../N256M0p2HDRe2500/", "../N256M5HDRe2500/",
              "../N512M0p2HDRe2500/", "../N512M5HDRe2500/",
              "../N1024M0p2HDRe2500/", "../N1024M5HDRe2500/",
              "../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
-sim_paths = ["../N512M0p2HDRe2500/"]
+sim_paths = ["../N2048M0p2HDRe2500HP/", "../N2048M5HDRe2500HP/"]
 # =====================================
 
 # create figure output path
@@ -143,6 +143,8 @@ def compute_2d_pdf_file(out_path, filename, vars, bins, norms=[1.0,1.0], overwri
         for b in tqdm(MyBlocks, disable=(myPE!=0), desc=f"[{myPE}]"): # loop over local list of block for the MPI rank
             x, y = gg.ReadBlockVar(b, dsets=dsets)
             x = x.flatten()*norms[0]
+            if dsets[0] == 'diss_rate': # take the absolute value of the dissipation rate
+                x = np.abs(x)
             y = y.flatten()*norms[1]
             counts_, x_edges_, y_edges_, binnum_ = binned_statistic_2d(x, y, np.ones_like(x, dtype=np.float32), statistic='count', bins=bins)
             counts_loc.append(counts_)
